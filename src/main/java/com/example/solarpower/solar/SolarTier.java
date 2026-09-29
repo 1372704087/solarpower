@@ -9,6 +9,9 @@ import com.example.solarpower.energy.EuTier;
  * <p>夜间（月光）发电量按 IU 规则为白天的一半，不足 1 EU/t 的档位（基础）夜晚不发电；
  * 不包含 IU 的月亮相位/太阳系数/日夜玻璃与模块加成系统。
  * <p>IU 里名为 admin（衍射）的档位其实是正常升级链上的一环（tier 8），因此保留。
+ * <p>SI 系列（太拉～昆它，tier 15~21）为超出 IU 14 级的扩展档，沿用链上既有的
+ * 规律外推：白天发电量每级 ×4（中子级起规律），容量每级 ×10（引力子级起规律），
+ * 昆它容量封顶到 {@link Long#MAX_VALUE}（与电压等级 MAX 封顶呼应）。
  */
 public enum SolarTier {
 
@@ -26,7 +29,14 @@ public enum SolarTier {
     BARYON("baryon_solar_panel", 11, 524880L, 10000000000L, 0xC98A5A),
     HADRON("hadron_solar_panel", 12, 2099520L, 25000000000L, 0x59D2FF),
     GRAVITON("graviton_solar_panel", 13, 8398080L, 250000000000L, 0x7F6BFF),
-    QUARK("quark_solar_panel", 14, 33592320L, 2500000000000L, 0xF0F4FF);
+    QUARK("quark_solar_panel", 14, 33592320L, 2500000000000L, 0xF0F4FF),
+    TERA("tera_solar_panel", 15, 134369280L, 25000000000000L, 0xFF9440),
+    PETA("peta_solar_panel", 16, 537477120L, 250000000000000L, 0xF03CE0),
+    EXA("exa_solar_panel", 17, 2149908480L, 2500000000000000L, 0xC8FF3E),
+    ZETTA("zetta_solar_panel", 18, 8599633920L, 25000000000000000L, 0x8C9EFF),
+    YOTTA("yotta_solar_panel", 19, 34398535680L, 250000000000000000L, 0x4DE8B0),
+    RONNA("ronna_solar_panel", 20, 137594142720L, 2500000000000000000L, 0xFF8C69),
+    QUETTA("quetta_solar_panel", 21, 550376570880L, Long.MAX_VALUE, 0x304FFE);
 
     private final String id;
     private final int iuTier;

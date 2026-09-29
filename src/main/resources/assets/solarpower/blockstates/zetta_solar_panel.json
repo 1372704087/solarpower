@@ -1,0 +1,10 @@
+{
+  "variants": {
+    "": {
+      "model": "solarpower:block/zetta_solar_panel"
+    },
+    "normal": {
+      "model": "solarpower:block/zetta_solar_panel"
+    }
+  }
+}

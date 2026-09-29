@@ -1,0 +1,10 @@
+{
+  "variants": {
+    "": {
+      "model": "solarpower:block/ronna_solar_panel"
+    },
+    "normal": {
+      "model": "solarpower:block/ronna_solar_panel"
+    }
+  }
+}

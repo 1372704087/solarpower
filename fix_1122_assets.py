@@ -17,6 +17,9 @@ PANELS = [
     "proton_solar_panel", "singular_solar_panel", "diffraction_solar_panel",
     "photonic_solar_panel", "neutron_solar_panel", "baryon_solar_panel",
     "hadron_solar_panel", "graviton_solar_panel", "quark_solar_panel",
+    "tera_solar_panel", "peta_solar_panel", "exa_solar_panel",
+    "zetta_solar_panel", "yotta_solar_panel", "ronna_solar_panel",
+    "quetta_solar_panel",
 ]
 CABLES = [
     "glass_cable", "glass_cable_2", "glass_cable_3", "glass_cable_4",
@@ -133,9 +136,13 @@ for cid in CABLES:
                shim("solarpower:block/" + cid + "_core"))
     write_json(os.path.join(FLAT, cid + ".json"),
                shim("solarpower:block/" + cid + "_core"))
-    write_json(os.path.join(ITEM, cid + ".json"), {
-        "parent": "solarpower:block/" + cid + "_core",
-        "display": load_display(os.path.join(ITEM, cid + ".json")),
-    })
+    # 物品模型：现有文件是 builtin/generated + item 贴图（textures/item/*.png），
+    # 不能覆盖成方块模型；只给缺失的档位生成兜底。
+    item_path = os.path.join(ITEM, cid + ".json")
+    if not os.path.exists(item_path):
+        write_json(item_path, {
+            "parent": "builtin/generated",
+            "textures": {"layer0": "solarpower:item/" + cid},
+        })
 
 print("panels", len(PANELS), "cables", len(CABLES))
