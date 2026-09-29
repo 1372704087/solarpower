@@ -1,0 +1,27 @@
+# Gradle
+.gradle/
+build/
+out/
+run/
+runclient/
+*.class
+
+# IDE
+.idea/
+*.iml
+.vscode/
+.settings/
+.classpath
+.project
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+logs/
+
+# Local secrets
+*.pem
+local.properties

@@ -1,0 +1,13 @@
+{
+  "modList": [
+    {
+      "modid": "solarpower",
+      "name": "Industrial Solar",
+      "version": "1.0.0",
+      "authorList": [
+        "example"
+      ],
+      "description": "复刻 Industrial Upgrade 的 15 档常规太阳能板与 11 级玻璃电缆。"
+    }
+  ]
+}

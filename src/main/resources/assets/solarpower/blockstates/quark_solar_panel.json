@@ -1,0 +1,10 @@
+{
+  "variants": {
+    "": {
+      "model": "solarpower:block/quark_solar_panel"
+    },
+    "normal": {
+      "model": "solarpower:block/quark_solar_panel"
+    }
+  }
+}
