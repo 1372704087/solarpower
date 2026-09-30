@@ -1,0 +1,10 @@
+{
+  "variants": {
+    "": {
+      "model": "solarpower:block/chaos_solar_panel"
+    },
+    "normal": {
+      "model": "solarpower:block/chaos_solar_panel"
+    }
+  }
+}

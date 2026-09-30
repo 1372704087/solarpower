@@ -1,0 +1,10 @@
+{
+  "variants": {
+    "": {
+      "model": "solarpower:block/eternal_silence_solar_panel"
+    },
+    "normal": {
+      "model": "solarpower:block/eternal_silence_solar_panel"
+    }
+  }
+}

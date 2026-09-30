@@ -1,0 +1,10 @@
+{
+  "variants": {
+    "": {
+      "model": "solarpower:block/paradox_solar_panel"
+    },
+    "normal": {
+      "model": "solarpower:block/paradox_solar_panel"
+    }
+  }
+}

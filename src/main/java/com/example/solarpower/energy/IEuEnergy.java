@@ -1,16 +1,18 @@
 package com.example.solarpower.energy;
 
+import java.math.BigInteger;
+
 /**
  * EU 能量容器的统一接口，对应 IC2 的 {@code IEnergySink}/{@code IEnergySource} 的简化版。
- * <p>蓄电量用 {@code long}：IU 的高阶太阳能板缓存可达 2.5×10¹² EU，超出 int 范围。
+ * <p>蓄电量用 {@link BigInteger}：不设数值上限，可承载任意大的 EU，不再受 long/int 封顶限制。
  */
 public interface IEuEnergy {
 
     /** 当前蓄电量（EU）。 */
-    long getStoredEu();
+    BigInteger getStoredEu();
 
     /** 蓄电上限（EU）。 */
-    long getCapacityEu();
+    BigInteger getCapacityEu();
 
     /** 该容器的电压等级。 */
     EuTier getTier();
@@ -23,7 +25,7 @@ public interface IEuEnergy {
      * @param simulate 为 true 时只计算不实际写入
      * @return 实际接收的 EU
      */
-    long receiveEu(long amount, EuTier tier, boolean simulate);
+    BigInteger receiveEu(BigInteger amount, EuTier tier, boolean simulate);
 
     /**
      * 抽取 EU。
@@ -32,5 +34,5 @@ public interface IEuEnergy {
      * @param simulate 为 true 时只计算不实际扣除
      * @return 实际抽取的 EU
      */
-    long extractEu(long amount, boolean simulate);
+    BigInteger extractEu(BigInteger amount, boolean simulate);
 }

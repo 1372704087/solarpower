@@ -34,6 +34,11 @@ minecraft {
 
 dependencies {
     minecraft 'net.minecraftforge:forge:1.12.2-14.23.5.2860'
+
+    // IC2 兼容（软依赖，仅编译期需要）：
+    // 把 IC2 1.12.2 的 jar（如 industrialcraft-2-2.8.221-ex112.jar）放进 libs/ 即可，
+    // libs/ 为空时不影响构建；IC2 缺席时代的 @Optional 会剥离相关接口与方法，运行不受影响。
+    compileOnly fileTree(dir: 'libs', include: ['*.jar'])
 }
 
 jar {

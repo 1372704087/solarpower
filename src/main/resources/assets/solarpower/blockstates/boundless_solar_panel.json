@@ -1,0 +1,10 @@
+{
+  "variants": {
+    "": {
+      "model": "solarpower:block/boundless_solar_panel"
+    },
+    "normal": {
+      "model": "solarpower:block/boundless_solar_panel"
+    }
+  }
+}

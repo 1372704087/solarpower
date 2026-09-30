@@ -1,8 +1,13 @@
 package com.example.solarpower.block;
 
 import com.example.solarpower.SolarPower;
+import com.example.solarpower.compat.Ic2Compat;
 import com.example.solarpower.solar.GlassCableTier;
 import com.example.solarpower.tileentity.GlassCableTile;
+
+import ic2.api.energy.tile.IEnergyConductor;
+import ic2.api.energy.tile.IEnergySink;
+import ic2.api.energy.tile.IEnergySource;
 
 import net.minecraft.block.BlockContainer;
 import net.minecraft.block.SoundType;
@@ -10,6 +15,7 @@ import net.minecraft.block.material.Material;
 import net.minecraft.block.state.BlockStateContainer;
 import net.minecraft.block.state.IBlockState;
 import net.minecraft.tileentity.TileEntity;
+import net.minecraft.util.BlockRenderLayer;
 import net.minecraft.util.EnumBlockRenderType;
 import net.minecraft.util.EnumFacing;
 import net.minecraft.util.math.AxisAlignedBB;
@@ -20,6 +26,11 @@ import net.minecraft.world.World;
 import net.minecraftforge.common.property.ExtendedBlockState;
 import net.minecraftforge.common.property.IExtendedBlockState;
 import net.minecraftforge.common.property.IUnlistedProperty;
+import net.minecraftforge.energy.CapabilityEnergy;
+import net.minecraftforge.fml.relauncher.Side;
+import net.minecraftforge.fml.relauncher.SideOnly;
+import net.minecraftforge.fml.relauncher.Side;
+import net.minecraftforge.fml.relauncher.SideOnly;
 
 import javax.annotation.Nullable;
 
@@ -87,11 +98,38 @@ public class GlassCableBlock extends BlockContainer {
     public static int maskFor(IBlockAccess world, BlockPos pos) {
         int mask = 0;
         for (EnumFacing dir : EnumFacing.values()) {
-            if (connectsTo(world.getBlockState(pos.offset(dir)))) {
+            BlockPos side = pos.offset(dir);
+            if (connectsTo(world.getBlockState(side)) || connectsToEnergyDevice(world, side, dir)) {
                 mask |= 1 << dir.getIndex();
             }
         }
         return mask;
+    }
+
+    /**
+     * 邻居是否为可接驳的能量设备：暴露 Forge Energy 能力，或（装了 IC2 时）实现
+     * IC2 电网接口。第三方机器不在 {@link #connectsTo} 白名单里，但能量上能接驳，
+     * 视觉上同样伸出接入臂——否则就是"电通了臂不伸"。
+     */
+    private static boolean connectsToEnergyDevice(IBlockAccess world, BlockPos side, EnumFacing dir) {
+        TileEntity te = world.getTileEntity(side);
+        if (te == null) {
+            return false;
+        }
+        // Ic2Compat.LOADED 短路：IC2 缺席时不会解析 ic2.* 类型
+        if (Ic2Compat.LOADED && (te instanceof IEnergySink || te instanceof IEnergySource
+                || te instanceof IEnergyConductor)) {
+            return true;
+        }
+        return te.hasCapability(CapabilityEnergy.ENERGY, dir.getOpposite());
+    }
+
+    /** 邻居方块实体变化时刷新渲染，接入臂才能在放置/拆除机器时实时伸出或收回。 */
+    @Override
+    public void onNeighborChange(IBlockAccess world, BlockPos pos, BlockPos neighbor) {
+        if (world instanceof World && ((World) world).isRemote) {
+            ((World) world).markBlockRangeForRenderUpdate(pos, pos);
+        }
     }
 
     @Override
@@ -131,6 +169,13 @@ public class GlassCableBlock extends BlockContainer {
     @Override
     public EnumBlockRenderType getRenderType(IBlockState state) {
         return EnumBlockRenderType.MODEL;
+    }
+
+    /** 贴图带透明镂空（玻璃质感），走 CUTOUT 层做 alpha 测试。 */
+    @SideOnly(Side.CLIENT)
+    @Override
+    public BlockRenderLayer getBlockLayer() {
+        return BlockRenderLayer.CUTOUT;
     }
 
     @Nullable

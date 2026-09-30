@@ -1,0 +1,10 @@
+{
+  "variants": {
+    "": {
+      "model": "solarpower:block/godhead_solar_panel"
+    },
+    "normal": {
+      "model": "solarpower:block/godhead_solar_panel"
+    }
+  }
+}

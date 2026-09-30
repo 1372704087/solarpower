@@ -1,0 +1,10 @@
+{
+  "variants": {
+    "": {
+      "model": "solarpower:block/dark_energy_solar_panel"
+    },
+    "normal": {
+      "model": "solarpower:block/dark_energy_solar_panel"
+    }
+  }
+}

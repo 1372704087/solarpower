@@ -1,0 +1,10 @@
+{
+  "variants": {
+    "": {
+      "model": "solarpower:block/stellar_flame_solar_panel"
+    },
+    "normal": {
+      "model": "solarpower:block/stellar_flame_solar_panel"
+    }
+  }
+}

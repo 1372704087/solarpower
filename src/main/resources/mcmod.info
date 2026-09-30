@@ -7,7 +7,7 @@
       "authorList": [
         "example"
       ],
-      "description": "复刻 Industrial Upgrade 的 15 档常规太阳能板与 11 级玻璃电缆。"
+      "description": "60 档常规太阳能板与 24 级玻璃电缆,支持 Forge Energy 与 IC2 电网互通。"
     }
   ]
 }

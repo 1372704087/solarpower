@@ -1,5 +1,6 @@
 package com.example.solarpower.client;
 
+import com.example.solarpower.energy.EuFormat;
 import com.example.solarpower.energy.EuTier;
 import com.example.solarpower.inventory.SolarPanelContainer;
 import com.example.solarpower.solar.SolarTier;
@@ -9,7 +10,12 @@ import net.minecraft.client.renderer.GlStateManager;
 import net.minecraft.client.resources.I18n;
 import net.minecraft.util.ResourceLocation;
 
-import java.util.Locale;
+import java.math.BigDecimal;
+import java.math.RoundingMode;
+import java.util.Collections;
+import java.util.List;
+
+import javax.annotation.Nullable;
 
 /** 太阳能板界面（1:1 复刻 NeoForge 版布局：能量管 + 指示灯 + 三行数据）。 */
 public class GuiSolarPanel extends GuiContainer {
@@ -40,7 +46,6 @@ public class GuiSolarPanel extends GuiContainer {
     private static final int ROW3_Y = 73;
 
     private static final int TEXT_COLOR = 0xDFEAF4;
-    private static final String[] EU_UNITS = {"k", "M", "G", "T", "P", "E"};
 
     private final SolarPanelContainer container;
 
@@ -56,6 +61,33 @@ public class GuiSolarPanel extends GuiContainer {
         this.drawDefaultBackground();
         super.drawScreen(mouseX, mouseY, partialTicks);
         this.renderHoveredToolTip(mouseX, mouseY);
+        // 数据行悬停：显示科学计数法约数（词头不好反推大小时用）
+        List<String> hover = this.rowHoverText(mouseX - this.guiLeft, mouseY - this.guiTop);
+        if (hover != null) {
+            this.drawHoveringText(hover, mouseX, mouseY, this.fontRenderer);
+        }
+    }
+
+    /** 三行数据行的悬停科学计数法约数；鼠标不在行上或数值太小时返回 null。 */
+    @Nullable
+    private List<String> rowHoverText(int rx, int ry) {
+        SolarTier tier = this.container.getTile().getTier();
+        String gen = EuFormat.scientificApprox(this.container.generating);
+        String volt = EuFormat.scientificApprox(tier.voltage().maxVoltage());
+        String stored = EuFormat.scientificApprox(this.container.stored);
+        String cap = EuFormat.scientificApprox(new BigDecimal(tier.capacityEu()));
+        boolean inRow = rx >= ROW_TEXT_X - 4 && rx < 172;
+        if (inRow && ry >= ROW1_Y - 2 && ry < ROW2_Y - 2 && gen != null) {
+            return Collections.singletonList("\u00a77\u2248 " + gen + " EU/t");
+        }
+        if (inRow && ry >= ROW2_Y - 2 && ry < ROW3_Y - 2 && volt != null) {
+            return Collections.singletonList("\u00a77\u2248 " + volt + " EU/packet");
+        }
+        if (inRow && ry >= ROW3_Y - 2 && ry < ROW3_Y + 18 && (stored != null || cap != null)) {
+            return Collections.singletonList("\u00a77\u2248 "
+                    + (stored == null ? "0" : stored) + " / " + (cap == null ? "0" : cap) + " EU");
+        }
+        return null;
     }
 
     @Override
@@ -65,9 +97,17 @@ public class GuiSolarPanel extends GuiContainer {
         this.drawTexturedModalRect(this.guiLeft, this.guiTop, 0, 0, PANEL_WIDTH, PANEL_HEIGHT);
 
         SolarTier tier = this.container.getTile().getTier();
-        long capacity = tier.capacityEu();
-        long stored = Math.min(capacity, this.container.stored);
-        int filled = capacity <= 0L ? 0 : (int) (stored * TUBE_HEIGHT / capacity);
+        BigDecimal capacity = new BigDecimal(tier.capacityEu());
+        int filled;
+        if (capacity.signum() <= 0 || this.container.stored.signum() <= 0) {
+            filled = 0;
+        } else if (this.container.stored.compareTo(capacity) >= 0) {
+            filled = TUBE_HEIGHT;
+        } else {
+            // 定点除法终止，比值恒在 [0,1)，不会出现 Infinity/NaN
+            double ratio = this.container.stored.divide(capacity, 4, RoundingMode.DOWN).doubleValue();
+            filled = (int) (ratio * TUBE_HEIGHT);
+        }
         filled = Math.max(0, Math.min(TUBE_HEIGHT, filled));
         if (filled > 0) {
             this.drawTexturedModalRect(this.guiLeft + TUBE_X,
@@ -75,7 +115,7 @@ public class GuiSolarPanel extends GuiContainer {
                     FILL_U, FILL_V + TUBE_HEIGHT - filled, 18, filled);
         }
 
-        int ledV = this.container.generating > 0
+        int ledV = this.container.generating.signum() > 0
                 ? (this.container.night ? LED_NIGHT_V : LED_LIT_V)
                 : LED_DIM_V;
         this.drawTexturedModalRect(this.guiLeft + LED_X, this.guiTop + LED_Y, LED_U, ledV, LED_SIZE, LED_SIZE);
@@ -84,41 +124,24 @@ public class GuiSolarPanel extends GuiContainer {
     @Override
     protected void drawGuiContainerForegroundLayer(int mouseX, int mouseY) {
         SolarTier tier = this.container.getTile().getTier();
+        // 标题用档位主题色的精确 RGB（GUI 字体不受原版 16 色板限制）
         this.fontRenderer.drawStringWithShadow(I18n.format(tier.translationKey() + ".name"),
-                20, 8, TEXT_COLOR);
+                20, 8, 0xFF000000 | tier.accentColor());
         this.fontRenderer.drawStringWithShadow(
-                I18n.format("gui.solarpower.generation", formatEu(this.container.generating)),
+                I18n.format("gui.solarpower.generation", EuFormat.formatEu(this.container.generating)),
                 ROW_TEXT_X, ROW1_Y, TEXT_COLOR);
         this.fontRenderer.drawStringWithShadow(
                 I18n.format("gui.solarpower.voltage", voltageLabel(tier)),
                 ROW_TEXT_X, ROW2_Y, TEXT_COLOR);
         this.fontRenderer.drawStringWithShadow(
                 I18n.format("gui.solarpower.energy",
-                        formatEu(this.container.stored), formatEu(tier.capacityEu())),
+                        EuFormat.formatEu(this.container.stored), EuFormat.formatEu(tier.capacityEu())),
                 ROW_TEXT_X, ROW3_Y, TEXT_COLOR);
     }
 
-    /** 电压显示，如 {@code LV (32 EU/packet)}；最高档只显示等级名。 */
+    /** 电压显示，如 {@code LV (32 EU/packet)}。 */
     private static String voltageLabel(SolarTier tier) {
         EuTier v = tier.voltage();
-        if (v.maxVoltage() == Integer.MAX_VALUE) {
-            return v.name();
-        }
-        return v.name() + " (" + v.maxVoltage() + " EU/packet)";
-    }
-
-    /** 把大数值压缩成带单位的短串。 */
-    private static String formatEu(long value) {
-        if (value < 1000L) {
-            return Long.toString(value);
-        }
-        double scaled = value;
-        int unit = -1;
-        while (scaled >= 1000.0 && unit < EU_UNITS.length - 1) {
-            scaled /= 1000.0;
-            unit++;
-        }
-        String pattern = scaled >= 100.0 ? "%.0f" : "%.2f";
-        return String.format(Locale.ROOT, pattern, scaled) + EU_UNITS[unit];
+        return v.name() + " (" + EuFormat.formatEu(v.maxVoltage()) + " EU/packet)";
     }
 }

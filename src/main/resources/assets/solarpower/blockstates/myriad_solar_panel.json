@@ -1,0 +1,10 @@
+{
+  "variants": {
+    "": {
+      "model": "solarpower:block/myriad_solar_panel"
+    },
+    "normal": {
+      "model": "solarpower:block/myriad_solar_panel"
+    }
+  }
+}

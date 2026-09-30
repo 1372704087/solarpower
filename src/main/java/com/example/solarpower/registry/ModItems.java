@@ -1,11 +1,12 @@
 package com.example.solarpower.registry;
 
 import com.example.solarpower.SolarPower;
+import com.example.solarpower.item.CableItemBlock;
+import com.example.solarpower.item.PanelItemBlock;
 import com.example.solarpower.solar.GlassCableTier;
 import com.example.solarpower.solar.SolarTier;
 
 import net.minecraft.item.Item;
-import net.minecraft.item.ItemBlock;
 import net.minecraftforge.event.RegistryEvent;
 import net.minecraftforge.fml.common.Mod.EventBusSubscriber;
 import net.minecraftforge.fml.common.eventhandler.SubscribeEvent;
@@ -23,14 +24,14 @@ public final class ModItems {
     @SubscribeEvent
     public static void onRegisterItems(RegistryEvent.Register<Item> event) {
         for (SolarTier tier : SolarTier.values()) {
-            Item item = new ItemBlock(ModBlocks.panel(tier)).setRegistryName(
+            Item item = new PanelItemBlock(ModBlocks.panel(tier)).setRegistryName(
                     SolarPower.MODID, tier.id());
             item.setCreativeTab(SolarPower.CREATIVE_TAB);
             event.getRegistry().register(item);
             PANEL_ITEMS.put(tier, item);
         }
         for (GlassCableTier tier : GlassCableTier.values()) {
-            Item item = new ItemBlock(ModBlocks.cable(tier)).setRegistryName(
+            Item item = new CableItemBlock(ModBlocks.cable(tier)).setRegistryName(
                     SolarPower.MODID, tier.id());
             item.setCreativeTab(SolarPower.CREATIVE_TAB);
             event.getRegistry().register(item);

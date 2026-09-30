@@ -24,7 +24,9 @@ import javax.annotation.Nonnull;
 
 /** 工业太阳能 1.12.2 Forge 版。功能与 NeoForge 1.21.1 版一致。 */
 @Mod(modid = SolarPower.MODID, name = SolarPower.NAME, version = SolarPower.VERSION,
-        acceptedMinecraftVersions = "[1.12,1.13)")
+        acceptedMinecraftVersions = "[1.12,1.13)",
+        // 软依赖：装了 IC2 时排在其后加载，保证注册进 IC2 电网时其 EnergyNet 已就绪；没装则忽略
+        dependencies = "after:ic2")
 public final class SolarPower {
 
     public static final String MODID = "solarpower";

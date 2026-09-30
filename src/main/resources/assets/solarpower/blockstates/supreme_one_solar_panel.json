@@ -1,0 +1,10 @@
+{
+  "variants": {
+    "": {
+      "model": "solarpower:block/supreme_one_solar_panel"
+    },
+    "normal": {
+      "model": "solarpower:block/supreme_one_solar_panel"
+    }
+  }
+}

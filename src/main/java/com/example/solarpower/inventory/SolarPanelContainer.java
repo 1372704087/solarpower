@@ -9,25 +9,42 @@ import net.minecraft.inventory.IContainerListener;
 import net.minecraftforge.fml.relauncher.Side;
 import net.minecraftforge.fml.relauncher.SideOnly;
 
-/** 太阳能板界面容器：无物品槽，同步「蓄电量」（高低 32 位）/「发电量」/「昼夜」。 */
+import java.math.BigDecimal;
+import java.math.BigInteger;
+
+/**
+ * 太阳能板界面容器：无物品槽，同步「蓄电量」/「发电量」/「昼夜」。
+ * <p>蓄电量与发电量是 BigInteger（可远超 double 上限），窗口属性只能传 short，
+ * 因此同步「首 4 位有效数字 + 十进制指数」两个 int，客户端用 {@link BigDecimal}
+ * 精确重建（约 4 位有效数字，足够界面显示与能量管比例）；服务端权威数值仍是精确的 BigInteger。
+ */
 public class SolarPanelContainer extends Container {
 
-    public static final int ID_STORED_LO = 0;
-    public static final int ID_STORED_HI = 1;
-    public static final int ID_GENERATING = 2;
-    public static final int ID_NIGHT = 3;
+    public static final int ID_STORED_MANTISSA = 0;
+    public static final int ID_STORED_EXP = 1;
+    public static final int ID_GEN_MANTISSA = 2;
+    public static final int ID_GEN_EXP = 3;
+    public static final int ID_NIGHT = 4;
 
     private final SolarPanelTile tile;
 
-    // 服务端上次推送 / 客户端当前值
-    private long lastStored = -1L;
-    private long lastGenerating = -1L;
+    // 服务端上次推送
+    private int lastStoredMantissa = -1;
+    private int lastStoredExp = -1;
+    private int lastGenMantissa = -1;
+    private int lastGenExp = -1;
     private int lastNight = -1;
 
-    /** 客户端镜像（服务端也可读，仅用于显示）。 */
-    public long stored;
-    public long generating;
+    /** 客户端镜像（由首 4 位有效数字精确重建，仅约 4 位有效数字；服务端仅用于显示）。 */
+    public BigDecimal stored = BigDecimal.ZERO;
+    public BigDecimal generating = BigDecimal.ZERO;
     public boolean night;
+
+    // 客户端拼装用的原始分量
+    private int storedMantissa;
+    private int storedExp;
+    private int genMantissa;
+    private int genExp;
 
     public SolarPanelContainer(SolarPanelTile tile) {
         this.tile = tile;
@@ -40,43 +57,74 @@ public class SolarPanelContainer extends Container {
     @Override
     public void detectAndSendChanges() {
         super.detectAndSendChanges();
-        long stored = this.tile.getEnergy().getStoredEu();
-        long generating = this.tile.getGenerating();
+        int[] storedParts = displayParts(this.tile.getEnergy().getStoredEu());
+        int[] genParts = displayParts(this.tile.getGenerating());
         int night = this.tile.isNight() ? 1 : 0;
-        for (IContainerListener crafting : this.listeners) {
-            if (this.lastStored != stored) {
-                crafting.sendWindowProperty(this, ID_STORED_LO, (int) (stored & 0xFFFF_FFFFL));
-                crafting.sendWindowProperty(this, ID_STORED_HI, (int) (stored >>> 32));
+        for (IContainerListener listener : this.listeners) {
+            if (this.lastStoredMantissa != storedParts[0] || this.lastStoredExp != storedParts[1]) {
+                listener.sendWindowProperty(this, ID_STORED_MANTISSA, storedParts[0]);
+                listener.sendWindowProperty(this, ID_STORED_EXP, storedParts[1]);
             }
-            if (this.lastGenerating != generating) {
-                crafting.sendWindowProperty(this, ID_GENERATING, (int) generating);
+            if (this.lastGenMantissa != genParts[0] || this.lastGenExp != genParts[1]) {
+                listener.sendWindowProperty(this, ID_GEN_MANTISSA, genParts[0]);
+                listener.sendWindowProperty(this, ID_GEN_EXP, genParts[1]);
             }
             if (this.lastNight != night) {
-                crafting.sendWindowProperty(this, ID_NIGHT, night);
+                listener.sendWindowProperty(this, ID_NIGHT, night);
             }
         }
-        this.lastStored = stored;
-        this.lastGenerating = generating;
+        this.lastStoredMantissa = storedParts[0];
+        this.lastStoredExp = storedParts[1];
+        this.lastGenMantissa = genParts[0];
+        this.lastGenExp = genParts[1];
         this.lastNight = night;
+    }
+
+    /** 大数 → {首 4 位有效数字, 十进制指数}；非正值按 {0, 0}。 */
+    private static int[] displayParts(BigInteger value) {
+        if (value == null || value.signum() <= 0) {
+            return new int[]{0, 0};
+        }
+        String digits = value.toString();
+        int mantissa = Integer.parseInt(digits.substring(0, Math.min(4, digits.length())));
+        return new int[]{mantissa, digits.length() - 1};
     }
 
     @Override
     @SideOnly(Side.CLIENT)
     public void updateProgressBar(int id, int value) {
         switch (id) {
-            case ID_STORED_LO:
-                this.stored = (this.stored & ~0xFFFF_FFFFL) | (value & 0xFFFF_FFFFL);
+            case ID_STORED_MANTISSA:
+                this.storedMantissa = value;
+                this.stored = rebuild(this.storedMantissa, this.storedExp);
                 break;
-            case ID_STORED_HI:
-                this.stored = (this.stored & 0xFFFF_FFFFL) | ((long) value << 32);
+            case ID_STORED_EXP:
+                this.storedExp = value;
+                this.stored = rebuild(this.storedMantissa, this.storedExp);
                 break;
-            case ID_GENERATING:
-                this.generating = value;
+            case ID_GEN_MANTISSA:
+                this.genMantissa = value;
+                this.generating = rebuild(this.genMantissa, this.genExp);
+                break;
+            case ID_GEN_EXP:
+                this.genExp = value;
+                this.generating = rebuild(this.genMantissa, this.genExp);
                 break;
             case ID_NIGHT:
                 this.night = value != 0;
                 break;
+            default:
+                break;
         }
+    }
+
+    /** 由「首 4 位有效数字 + 十进制指数」精确重建显示值。 */
+    private static BigDecimal rebuild(int mantissa, int exponent) {
+        if (mantissa <= 0) {
+            return BigDecimal.ZERO;
+        }
+        int digits = (int) Math.log10(mantissa) + 1;
+        return BigDecimal.valueOf(mantissa).scaleByPowerOfTen(exponent - (digits - 1));
     }
 
     @Override

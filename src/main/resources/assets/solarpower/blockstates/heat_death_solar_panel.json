@@ -1,0 +1,10 @@
+{
+  "variants": {
+    "": {
+      "model": "solarpower:block/heat_death_solar_panel"
+    },
+    "normal": {
+      "model": "solarpower:block/heat_death_solar_panel"
+    }
+  }
+}

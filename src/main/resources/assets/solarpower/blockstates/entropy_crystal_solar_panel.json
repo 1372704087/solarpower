@@ -1,0 +1,10 @@
+{
+  "variants": {
+    "": {
+      "model": "solarpower:block/entropy_crystal_solar_panel"
+    },
+    "normal": {
+      "model": "solarpower:block/entropy_crystal_solar_panel"
+    }
+  }
+}
