@@ -31,3 +31,13 @@ local.properties
 
 # 贴图管线的预览输出(本地看看即可,不入库)
 texturegen/preview/
+
+# 本地工作区(不入库)
+.workbuddy/
+.texturework/
+forge-1.12.2/
+素材/
+
+# Python 缓存
+__pycache__/
+*.pyc

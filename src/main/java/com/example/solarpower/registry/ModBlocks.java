@@ -2,6 +2,7 @@ package com.example.solarpower.registry;
 
 import com.example.solarpower.SolarPower;
 import com.example.solarpower.block.GlassCableBlock;
+import com.example.solarpower.block.MolecularTransformerBlock;
 import com.example.solarpower.block.SolarPanelBlock;
 import com.example.solarpower.solar.GlassCableTier;
 import com.example.solarpower.solar.SolarTier;
@@ -20,6 +21,7 @@ public final class ModBlocks {
 
     private static final Map<SolarTier, SolarPanelBlock> PANELS = new EnumMap<>(SolarTier.class);
     private static final Map<GlassCableTier, GlassCableBlock> CABLES = new EnumMap<>(GlassCableTier.class);
+    private static MolecularTransformerBlock molecularTransformer;
 
     @SubscribeEvent
     public static void onRegisterBlocks(RegistryEvent.Register<Block> event) {
@@ -39,6 +41,10 @@ public final class ModBlocks {
             event.getRegistry().register(block);
             CABLES.put(tier, block);
         }
+        molecularTransformer = new MolecularTransformerBlock();
+        molecularTransformer.setRegistryName(SolarPower.MODID, "molecular_transformer");
+        molecularTransformer.setUnlocalizedName(SolarPower.MODID + ".molecular_transformer");
+        event.getRegistry().register(molecularTransformer);
     }
 
     public static SolarPanelBlock panel(SolarTier tier) {
@@ -47,6 +53,10 @@ public final class ModBlocks {
 
     public static GlassCableBlock cable(GlassCableTier tier) {
         return CABLES.get(tier);
+    }
+
+    public static MolecularTransformerBlock molecularTransformer() {
+        return molecularTransformer;
     }
 
     private ModBlocks() {

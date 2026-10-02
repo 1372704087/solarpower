@@ -20,7 +20,7 @@ palettes = json.load(open(os.path.join(BASE, 'cable_palettes.json')))
 TIERS = [
     ('glass_cable',    '基础玻璃电缆', 'Basic Glass Fibre Cable'),
     ('glass_cable_2',  '混合玻璃电缆', 'Hybrid Glass Fibre Cable'),
-    ('glass_cable_3',  '完美玻璃电缆', 'Perfect Glass Fibre Cable'),
+    ('ultimate_hybrid_glass_cable',  '完美玻璃电缆', 'Perfect Glass Fibre Cable'),
     ('glass_cable_4',  '量子玻璃电缆', 'Quantum Glass Fibre Cable'),
     ('glass_cable_5',  '光谱玻璃电缆', 'Spectral Glass Fibre Cable'),
     ('glass_cable_6',  '质子玻璃电缆', 'Protonic Glass Fibre Cable'),

@@ -1,6 +1,7 @@
 package com.example.solarpower.tileentity;
 
 import com.example.solarpower.energy.EuCableNet;
+import com.example.solarpower.energy.EuFormat;
 import com.example.solarpower.energy.FeConvert;
 import com.example.solarpower.energy.IEuEnergy;
 import com.example.solarpower.energy.EuTier;
@@ -55,6 +56,13 @@ public class SolarPanelTile extends TileEntity implements ITickable, IEnergySour
 
     private final TileEnergy storage = new TileEnergy();
     private BigInteger generating = BigInteger.ZERO;
+    /** 发电量显示分量缓存（同上，按 generating 引用命中）。 */
+    private BigInteger genPartsFor;
+    private int[] genPartsCache;
+    /** 发电量本体缓存：天气/昼夜组合 + 档位不变时直接复用（免掉每 tick 的大数乘除）。 */
+    private int genWeatherKey = -1;
+    private SolarTier genForTier;
+    private BigInteger genCache = BigInteger.ZERO;
     private SolarTier resolvedTier;
 
     /** 档位由所在方块的实例决定（1.12 的 TileEntity 构造器不带状态，懒解析）。 */
@@ -74,6 +82,22 @@ public class SolarPanelTile extends TileEntity implements ITickable, IEnergySour
 
     public BigInteger getGenerating() {
         return this.generating;
+    }
+
+    /** 蓄电量的显示分量（首 4 位有效数字 + 十进制指数），按 stored 引用惰性缓存。
+     *  <p>容器每秒调用 20 次而 stored 每 tick 才变一次，缓存后每 tick 至多做一次
+     *  大数除法，避免 {@link com.example.solarpower.energy.EuFormat#displayParts} 的 O(n²) 开销被重复触发。 */
+    public int[] getStoredDisplayParts() {
+        return this.storage.displayPartsCached();
+    }
+
+    /** 发电量的显示分量，按 generating 引用惰性缓存（同 stored，每 tick 取用）。 */
+    public int[] getGeneratingDisplayParts() {
+        if (this.genPartsFor != this.generating) {
+            this.genPartsFor = this.generating;
+            this.genPartsCache = EuFormat.displayParts(this.generating);
+        }
+        return this.genPartsCache;
     }
 
     public boolean isNight() {
@@ -260,6 +284,7 @@ public class SolarPanelTile extends TileEntity implements ITickable, IEnergySour
             return;
         }
         SolarTier tier = this.getTier();
+        this.storage.clampToCapacity();   // 读档时档位未解析，存量在首个 tick 才夹回容量
         BigInteger generated = this.computeGeneration(tier);
         this.generating = generated;
         if (generated.signum() > 0) {
@@ -277,18 +302,47 @@ public class SolarPanelTile extends TileEntity implements ITickable, IEnergySour
         if (!this.world.canSeeSky(this.pos.up())) {
             return BigInteger.ZERO; // 上方被方块遮挡
         }
-        BigInteger base = this.world.isDaytime() ? tier.generationEu() : tier.nightGenerationEu();
+        // 晴/雨与昼夜的组合只有 4 种，且 base 是档位常量：结果直接缓存，
+        // 避免每 tick 对上百位的大数做 O(n²) 的 multiply/divide。
+        int key = (this.world.isDaytime() ? 0 : 1) | ((this.world.isRaining() || this.world.isThundering()) ? 2 : 0);
+        if (this.genWeatherKey == key && this.genForTier == tier) {
+            return this.genCache;
+        }
+        BigInteger base;
+        switch (key) {
+            case 1:
+                base = tier.nightGenerationEu();
+                break;
+            case 2:
+                base = rainScaled(tier.generationEu());
+                break;
+            case 3:
+                base = rainScaled(tier.nightGenerationEu());
+                break;
+            default:
+                base = tier.generationEu();
+                break;
+        }
+        this.genWeatherKey = key;
+        this.genForTier = tier;
+        this.genCache = base;
+        return base;
+    }
+
+    /** 雨天/雷暴系数 ×0.65，用整数 65/100 精确计算。 */
+    private static BigInteger rainScaled(BigInteger base) {
         if (base.signum() <= 0) {
             return BigInteger.ZERO;
         }
-        boolean raining = this.world.isRaining() || this.world.isThundering();
-        return raining ? base.multiply(RAIN_NUMERATOR).divide(RAIN_DENOMINATOR) : base;
+        return base.multiply(RAIN_NUMERATOR).divide(RAIN_DENOMINATOR);
     }
 
     private void pushToCables() {
         for (EnumFacing dir : EnumFacing.values()) {
             BlockPos side = this.pos.offset(dir);
-            if (this.world.getTileEntity(side) instanceof GlassCableTile) {
+            TileEntity be = this.world.getTileEntity(side);
+            if (be instanceof GlassCableTile) {
+                // 同 tick 内首次调用会 BFS 整张网，之后同网络的面板直接命中缓存
                 EuCableNet.push(this.world, side, this.storage, this.getTier().voltage());
             }
         }
@@ -314,7 +368,7 @@ public class SolarPanelTile extends TileEntity implements ITickable, IEnergySour
     @Override
     public NBTTagCompound writeToNBT(NBTTagCompound compound) {
         super.writeToNBT(compound);
-        compound.setString(TAG_ENERGY, this.storage.getStoredEu().toString());
+        compound.setString(TAG_ENERGY, this.storage.storedAsString());
         return compound;
     }
 
@@ -322,6 +376,12 @@ public class SolarPanelTile extends TileEntity implements ITickable, IEnergySour
     private final class TileEnergy implements IEuEnergy {
 
         private BigInteger stored = BigInteger.ZERO;
+        /** NBT 串缓存：自动存档周期性调用 toString，不变则免掉平方级转换。 */
+        private BigInteger stringFor;
+        private String stringCache;
+        /** displayParts 缓存：同上，按 stored 引用命中（stored 每 tick 至多变一次）。 */
+        private BigInteger partsFor;
+        private int[] partsCache;
 
         @Override
         public BigInteger getStoredEu() {
@@ -371,13 +431,39 @@ public class SolarPanelTile extends TileEntity implements ITickable, IEnergySour
             return extracted;
         }
 
-        void setStored(BigInteger value) {
-            if (value == null || value.signum() < 0) {
-                this.stored = BigInteger.ZERO;
-            } else {
-                this.stored = value.min(getCapacityEu());
+        /** 存量的十进制串（惰性缓存；自动存档周期性取用）。 */
+        String storedAsString() {
+            if (this.stringFor != this.stored) {
+                this.stringFor = this.stored;
+                this.stringCache = this.stored.toString();
             }
+            return this.stringCache;
+        }
+
+        /** 存量的显示分量（惰性缓存；容器每 tick 取用）。 */
+        int[] displayPartsCached() {
+            if (this.partsFor != this.stored) {
+                this.partsFor = this.stored;
+                this.partsCache = EuFormat.displayParts(this.stored);
+            }
+            return this.partsCache;
+        }
+
+        void setStored(BigInteger value) {
+            // 只做符号保护、不做容量钳制：1.12.2 读档时 TileEntity 先于方块区段生效，
+            // 此刻 getTier() 必然解析失败回落基础档，在这里钳会把存量错剪到 128 EU。
+            // 容量钳制推迟到首个 tick 的 clampToCapacity()（档位已解析）。
+            this.stored = value == null || value.signum() < 0 ? BigInteger.ZERO : value;
             markDirty();
+        }
+
+        /** 档位解析后调用：把存量夹回容量内（兼容旧档超容量的情况）。 */
+        void clampToCapacity() {
+            BigInteger capacity = getCapacityEu();
+            if (this.stored.compareTo(capacity) > 0) {
+                this.stored = capacity;
+                markDirty();
+            }
         }
     }
 }

@@ -1,5 +1,6 @@
 package com.example.solarpower.inventory;
 
+import com.example.solarpower.energy.EuFormat;
 import com.example.solarpower.tileentity.SolarPanelTile;
 
 import net.minecraft.entity.player.EntityPlayer;
@@ -57,8 +58,8 @@ public class SolarPanelContainer extends Container {
     @Override
     public void detectAndSendChanges() {
         super.detectAndSendChanges();
-        int[] storedParts = displayParts(this.tile.getEnergy().getStoredEu());
-        int[] genParts = displayParts(this.tile.getGenerating());
+        int[] storedParts = this.tile.getStoredDisplayParts();
+        int[] genParts = this.tile.getGeneratingDisplayParts();
         int night = this.tile.isNight() ? 1 : 0;
         for (IContainerListener listener : this.listeners) {
             if (this.lastStoredMantissa != storedParts[0] || this.lastStoredExp != storedParts[1]) {
@@ -78,16 +79,6 @@ public class SolarPanelContainer extends Container {
         this.lastGenMantissa = genParts[0];
         this.lastGenExp = genParts[1];
         this.lastNight = night;
-    }
-
-    /** 大数 → {首 4 位有效数字, 十进制指数}；非正值按 {0, 0}。 */
-    private static int[] displayParts(BigInteger value) {
-        if (value == null || value.signum() <= 0) {
-            return new int[]{0, 0};
-        }
-        String digits = value.toString();
-        int mantissa = Integer.parseInt(digits.substring(0, Math.min(4, digits.length())));
-        return new int[]{mantissa, digits.length() - 1};
     }
 
     @Override

@@ -1,0 +1,10 @@
+{
+  "variants": {
+    "": {
+      "model": "solarpower:block/cosmic_string_solar_panel"
+    },
+    "normal": {
+      "model": "solarpower:block/cosmic_string_solar_panel"
+    }
+  }
+}

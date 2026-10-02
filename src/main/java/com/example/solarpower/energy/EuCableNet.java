@@ -12,8 +12,10 @@ import net.minecraft.world.World;
 import java.math.BigInteger;
 import java.util.ArrayDeque;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 
 /**
@@ -33,6 +35,13 @@ import java.util.Set;
 public final class EuCableNet {
 
     private static final int MAX_NET_SIZE = 4096;
+
+    /** 网络结构缓存：同一 game tick 内按 anchor 命中，避免每块面板各 BFS 一遍。
+     *  <p>只在服务端主线程使用（{@code push}/{@code drain}/{@code fill} 都已被 isRemote 拦住），
+     *  因此不需要同步。tick 变化即整表失效——网络结构可能因放置/拆除电缆而改变。 */
+    private static World NET_CACHE_WORLD;
+    private static long NET_CACHE_TICK = Long.MIN_VALUE;
+    private static final Map<BlockPos, Net> NET_CACHE_ANCHOR = new HashMap<>();
 
     private EuCableNet() {
     }
@@ -120,12 +129,37 @@ public final class EuCableNet {
         return net.isEmpty() ? BigInteger.ZERO : storedOf(world, net).min(net.tier().capacityPerTick());
     }
 
-    /** 从 anchor 出发 BFS 收集整个电缆网络（成员坐标 + 邻接源/汇）。 */
+    /** 从 anchor 出发 BFS 收集整个电缆网络（成员坐标 + 邻接源/汇）。
+     *  <p>结果按 {@code world.getTotalWorldTime()} 缓存，并把整张网络的**每个成员坐标**
+     *  都登记为 key：同一 tick 内同网络的面板无论从哪根电缆接入都命中同一份结果。
+     *  原先每块面板各自 BFS 一遍，N 块面板就是 N 遍；现在是每网络每 tick 一遍。
+     *  <p>BFS 部分与原实现逐字等价；源/汇扫描仍按「逐个电缆扫 6 邻」进行，
+     *  因为同一块面板可能邻接多根电缆，必须按其各自的去重集合统计。 */
     private static Net collect(World world, BlockPos anchor, EuTier packetTier) {
-        if (cableAt(world, anchor) == null) {
-            return Net.EMPTY;
+        long now = world.getTotalWorldTime();
+        if (NET_CACHE_WORLD == world && NET_CACHE_TICK == now) {
+            Net cached = NET_CACHE_ANCHOR.get(anchor);
+            if (cached != null) {
+                // 缓存里只存「结构」（成员、源、汇候选），电压包等级与本次调用相关：
+                // 汇是否收电依赖 packetTier，必须按本次等级重新过滤，不能复用上一调用方的结果。
+                return cached.resolveSinks(world, packetTier);
+            }
+        } else {
+            // 进入新 tick：整表失效（网络结构可能因放置/拆除而变）
+            NET_CACHE_ANCHOR.clear();
+            NET_CACHE_WORLD = world;
+            NET_CACHE_TICK = now;
         }
-        GlassCableTier tier = cableAt(world, anchor).tier();
+
+        GlassCableTile anchorCable = cableAt(world, anchor);
+        if (anchorCable == null) {
+            Net empty = Net.EMPTY.resolveSinks(world, packetTier);
+            NET_CACHE_ANCHOR.put(anchor, Net.EMPTY);
+            return empty;
+        }
+        GlassCableTier tier = anchorCable.tier();
+
+        // --- 第一遍：BFS 收集电缆成员（与原实现逐字等价，包括 MAX_NET_SIZE 的计法） ---
         List<BlockPos> cables = new ArrayList<>();
         Set<BlockPos> seen = new HashSet<>();
         ArrayDeque<BlockPos> queue = new ArrayDeque<>();
@@ -141,11 +175,12 @@ public final class EuCableNet {
                 }
             }
         }
-        // 源：与网络相邻的太阳能板（推流方）；汇：与网络相邻、暴露 IEuEnergy 且能收该电压包的非面板方块
+
+        // --- 第二遍：扫描每个电缆的非电缆邻居，分类为源 / 汇候选 ---
         List<BlockPos> sources = new ArrayList<>();
         Set<BlockPos> sourceSeen = new HashSet<>();
-        List<BlockPos> sinks = new ArrayList<>();
         Set<BlockPos> sinkSeen = new HashSet<>();
+        List<BlockPos> sinkCandidates = new ArrayList<>();
         for (BlockPos cable : cables) {
             for (EnumFacing dir : EnumFacing.values()) {
                 BlockPos side = cable.offset(dir);
@@ -159,15 +194,19 @@ public final class EuCableNet {
                     }
                     continue;
                 }
-                if (sinkSeen.add(side) && be instanceof IEuEnergy) {
-                    IEuEnergy energy = (IEuEnergy) be;
-                    if (energy.receiveEu(BigInteger.ONE, packetTier, true).signum() > 0) {
-                        sinks.add(side);
-                    }
+                if (be instanceof IEuEnergy && sinkSeen.add(side)) {
+                    sinkCandidates.add(side);
                 }
             }
         }
-        return new Net(tier, packetTier, cables, sources, sinks);
+
+        // 缓存结构（成员/源/汇候选）；汇的实际收电力每次都按调用方给的 packetTier 重判
+        Net base = new Net(tier, cables, sources, sinkCandidates);
+        // 整张网络的每个成员都指向同一份结构：这样同网络的面板无论从哪根电缆接入都能命中
+        for (BlockPos cable : cables) {
+            NET_CACHE_ANCHOR.put(cable, base);
+        }
+        return base.resolveSinks(world, packetTier);
     }
 
     /** 网络相邻汇的空余容量之和。 */
@@ -259,27 +298,54 @@ public final class EuCableNet {
         return be instanceof SolarPanelTile ? (SolarPanelTile) be : null;
     }
 
-    /** 一张电缆网络：等级、电压包等级、成员电缆坐标与邻接源/汇坐标。 */
+    /** 一张电缆网络的结构快照：等级、成员电缆坐标、邻接源坐标与邻接能量方块（汇候选）。
+     *  <p>汇候选是「所有暴露 IEuEnergy 的邻接方块」，是否真能收电取决于电压包等级，
+     *  由 {@link #resolveSinks} 按当次调用的 tier 过滤——因此本对象可跨不同 packetTier 复用。 */
     public static final class Net {
 
-        static final Net EMPTY = new Net(null, EuTier.LV, new ArrayList<>(), new ArrayList<>(), new ArrayList<>());
+        static final Net EMPTY = new Net(null, new ArrayList<>(), new ArrayList<>(), new ArrayList<>());
 
         private final GlassCableTier tier;
-        private final EuTier packetTier;
         private final List<BlockPos> cables;
         private final List<BlockPos> sources;
+        private final List<BlockPos> sinkCandidates;
+        /** 本次调用实际可收电的汇（由 resolveSinks 按 packetTier 过滤得出）。 */
+        private final EuTier packetTier;
         private final List<BlockPos> sinks;
 
-        Net(GlassCableTier tier, EuTier packetTier, List<BlockPos> cables, List<BlockPos> sources, List<BlockPos> sinks) {
+        /** 结构快照（尚无 packetTier/sinks，由 {@link #resolveSinks} 派生）。 */
+        Net(GlassCableTier tier, List<BlockPos> cables, List<BlockPos> sources, List<BlockPos> sinkCandidates) {
+            this(tier, EuTier.LV, cables, sources, sinkCandidates, java.util.Collections.emptyList());
+        }
+
+        private Net(GlassCableTier tier, EuTier packetTier, List<BlockPos> cables,
+                    List<BlockPos> sources, List<BlockPos> sinkCandidates, List<BlockPos> sinks) {
             this.tier = tier;
             this.packetTier = packetTier;
             this.cables = cables;
             this.sources = sources;
+            this.sinkCandidates = sinkCandidates;
             this.sinks = sinks;
         }
 
         boolean isEmpty() {
             return this.cables.isEmpty();
+        }
+
+        /** 按电压包等级过滤汇候选，产出本次调用可用的汇集合。
+         *  <p>ECJ 的 {@code receiveEu} 判定与空容量计算都要读 world，故需传入 world。 */
+        Net resolveSinks(World world, EuTier packetTier) {
+            if (this.sinkCandidates.isEmpty()) {
+                return new Net(this.tier, packetTier, this.cables, this.sources, this.sinkCandidates, java.util.Collections.emptyList());
+            }
+            List<BlockPos> sinks = new ArrayList<>(this.sinkCandidates.size());
+            for (BlockPos pos : this.sinkCandidates) {
+                IEuEnergy energy = energyAt(world, pos);
+                if (energy != null && energy.receiveEu(BigInteger.ONE, packetTier, true).signum() > 0) {
+                    sinks.add(pos);
+                }
+            }
+            return new Net(this.tier, packetTier, this.cables, this.sources, this.sinkCandidates, sinks);
         }
 
         public GlassCableTier tier() {

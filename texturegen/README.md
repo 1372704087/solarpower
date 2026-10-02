@@ -1,5 +1,9 @@
 # texturegen — 太阳能板贴图生成管线
 
+> 分子重组仪相关的贴图（14 个合成物品、机器方块、GUI 底图）自 2026-10-01 起
+> 直接采用 ASP（Advanced Solar Panels）原版素材（用户指定），不在本管线生成；
+> 布局坐标见 `MolecularTransformerContainer` / `GuiMolecularTransformer` 注释。
+
 本项目全部太阳能板贴图（15 级 × 顶面/侧面，共 30 张 PNG）由本目录下的脚本生成，
 改参数重跑即可批量调整，无需手绘。
 

@@ -1,6 +1,7 @@
 package com.example.solarpower.client;
 
 import com.example.solarpower.SolarPower;
+import com.example.solarpower.registry.ModBlocks;
 import com.example.solarpower.registry.ModItems;
 import com.example.solarpower.solar.GlassCableTier;
 import com.example.solarpower.solar.SolarTier;
@@ -34,6 +35,16 @@ public final class ClientModelRegistry {
                 ModelLoader.setCustomModelResourceLocation(item, 0,
                         new ModelResourceLocation(item.getRegistryName(), "inventory"));
             }
+        }
+        // 分子重组机方块物品 + 太阳能合成物品
+        for (Item item : ModItems.craftingItems()) {
+            ModelLoader.setCustomModelResourceLocation(item, 0,
+                    new ModelResourceLocation(item.getRegistryName(), "inventory"));
+        }
+        Item transformer = Item.getItemFromBlock(ModBlocks.molecularTransformer());
+        if (transformer != null) {
+            ModelLoader.setCustomModelResourceLocation(transformer, 0,
+                    new ModelResourceLocation(transformer.getRegistryName(), "inventory"));
         }
     }
 

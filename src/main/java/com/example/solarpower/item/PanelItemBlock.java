@@ -40,8 +40,9 @@ public class PanelItemBlock extends ItemBlock {
                                ITooltipFlag flag) {
         SolarTier tier = ((SolarPanelBlock) this.getBlock()).tier();
         tooltip.add(I18n.format("tooltip.solarpower.energy_tier", tier.iuTier(), tier.voltage().name()));
-        tooltip.add(I18n.format("tooltip.solarpower.day_gen", EuFormat.annotated(tier.generationEu())));
-        tooltip.add(I18n.format("tooltip.solarpower.night_gen", EuFormat.annotated(tier.nightGenerationEu())));
-        tooltip.add(I18n.format("tooltip.solarpower.capacity", EuFormat.annotated(tier.capacityEu())));
+        // 均为档位常量，走 SolarTier 的惰性缓存（按对象身份命中的 EuFormat 缓存对这里也会命中）
+        tooltip.add(I18n.format("tooltip.solarpower.day_gen", tier.generationAnnotated()));
+        tooltip.add(I18n.format("tooltip.solarpower.night_gen", tier.nightGenerationAnnotated()));
+        tooltip.add(I18n.format("tooltip.solarpower.capacity", tier.capacityAnnotated()));
     }
 }

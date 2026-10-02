@@ -1,7 +1,8 @@
 package com.example.solarpower.client;
 
-import com.example.solarpower.SolarPower;
+import com.example.solarpower.inventory.MolecularTransformerContainer;
 import com.example.solarpower.inventory.SolarPanelContainer;
+import com.example.solarpower.tileentity.MolecularTransformerTile;
 import com.example.solarpower.tileentity.SolarPanelTile;
 
 import net.minecraft.entity.player.EntityPlayer;
@@ -15,13 +16,20 @@ import javax.annotation.Nullable;
 public class GuiHandler implements IGuiHandler {
 
     public static final int GUI_SOLAR_PANEL = 0;
+    public static final int GUI_MOLECULAR_TRANSFORMER = 1;
 
     @Nullable
     @Override
     public Object getServerGuiElement(int id, EntityPlayer player, World world, int x, int y, int z) {
+        BlockPos pos = new BlockPos(x, y, z);
         if (id == GUI_SOLAR_PANEL
-                && world.getTileEntity(new BlockPos(x, y, z)) instanceof SolarPanelTile) {
-            return new SolarPanelContainer((SolarPanelTile) world.getTileEntity(new BlockPos(x, y, z)));
+                && world.getTileEntity(pos) instanceof SolarPanelTile) {
+            return new SolarPanelContainer((SolarPanelTile) world.getTileEntity(pos));
+        }
+        if (id == GUI_MOLECULAR_TRANSFORMER
+                && world.getTileEntity(pos) instanceof MolecularTransformerTile) {
+            return new MolecularTransformerContainer(player.inventory,
+                    (MolecularTransformerTile) world.getTileEntity(pos));
         }
         return null;
     }
@@ -29,10 +37,15 @@ public class GuiHandler implements IGuiHandler {
     @Nullable
     @Override
     public Object getClientGuiElement(int id, EntityPlayer player, World world, int x, int y, int z) {
+        BlockPos pos = new BlockPos(x, y, z);
         if (id == GUI_SOLAR_PANEL
-                && world.getTileEntity(new BlockPos(x, y, z)) instanceof SolarPanelTile) {
-            return new GuiSolarPanel(new SolarPanelContainer(
-                    (SolarPanelTile) world.getTileEntity(new BlockPos(x, y, z))));
+                && world.getTileEntity(pos) instanceof SolarPanelTile) {
+            return new GuiSolarPanel(new SolarPanelContainer((SolarPanelTile) world.getTileEntity(pos)));
+        }
+        if (id == GUI_MOLECULAR_TRANSFORMER
+                && world.getTileEntity(pos) instanceof MolecularTransformerTile) {
+            return new GuiMolecularTransformer(new MolecularTransformerContainer(player.inventory,
+                    (MolecularTransformerTile) world.getTileEntity(pos)));
         }
         return null;
     }

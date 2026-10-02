@@ -1,0 +1,10 @@
+{
+  "variants": {
+    "": {
+      "model": "solarpower:block/ultimate_hybrid_glass_cable_core"
+    },
+    "normal": {
+      "model": "solarpower:block/ultimate_hybrid_glass_cable_core"
+    }
+  }
+}

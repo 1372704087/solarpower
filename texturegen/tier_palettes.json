@@ -322,7 +322,7 @@
    255
   ]
  },
- "aether_solar_panel": {
+ "cosmic_string_solar_panel": {
   "base": [
    88,
    214,
@@ -356,7 +356,7 @@
    182
   ]
  },
- "void_essence_solar_panel": {
+ "omniversal_solar_panel": {
   "base": [
    86,
    104,
@@ -407,7 +407,7 @@
    188
   ]
  },
- "grand_unified_solar_panel": {
+ "star_core_solar_panel": {
   "base": [
    0,
    208,
@@ -424,7 +424,7 @@
    212
   ]
  },
- "stellar_flame_solar_panel": {
+ "genesis_solar_panel": {
   "base": [
    232,
    191,
@@ -475,7 +475,7 @@
    255
   ]
  },
- "superbrane_solar_panel": {
+ "brane_solar_panel": {
   "base": [
    232,
    111,
@@ -509,7 +509,7 @@
    255
   ]
  },
- "null_solar_panel": {
+ "zeroing_solar_panel": {
   "base": [
    0,
    177,
@@ -662,7 +662,7 @@
    252
   ]
  },
- "terminus_solar_panel": {
+ "abyss_solar_panel": {
   "base": [
    232,
    232,
@@ -883,7 +883,7 @@
    255
   ]
  },
- "entropy_crystal_solar_panel": {
+ "endgame_solar_panel": {
   "base": [
    232,
    58,
@@ -900,7 +900,7 @@
    198
   ]
  },
- "creation_core_solar_panel": {
+ "the_absolute_solar_panel": {
   "base": [
    163,
    124,
@@ -985,7 +985,7 @@
    219
   ]
  },
- "eternal_silence_solar_panel": {
+ "supreme_principle_solar_panel": {
   "base": [
    232,
    100,
@@ -1000,6 +1000,23 @@
    255,
    190,
    169
+  ]
+ },
+ "finale_solar_panel": {
+  "base": [
+   162,
+   0,
+   0
+  ],
+  "light": [
+   110,
+   0,
+   0
+  ],
+  "dark": [
+   218,
+   153,
+   153
   ]
  },
  "finality_solar_panel": {
@@ -1017,6 +1034,108 @@
    220,
    255,
    180
+  ]
+ },
+ "divine_light_solar_panel": {
+  "base": [
+   255,
+   214,
+   110
+  ],
+  "light": [
+   150,
+   105,
+   25
+  ],
+  "dark": [
+   255,
+   250,
+   235
+  ]
+ },
+ "firmament_solar_panel": {
+  "base": [
+   100,
+   165,
+   255
+  ],
+  "light": [
+   25,
+   55,
+   130
+  ],
+  "dark": [
+   215,
+   240,
+   255
+  ]
+ },
+ "pantheon_solar_panel": {
+  "base": [
+   160,
+   100,
+   210
+  ],
+  "light": [
+   75,
+   25,
+   120
+  ],
+  "dark": [
+   245,
+   230,
+   250
+  ]
+ },
+ "mandate_of_heaven_solar_panel": {
+  "base": [
+   235,
+   175,
+   70
+  ],
+  "light": [
+   150,
+   30,
+   35
+  ],
+  "dark": [
+   255,
+   240,
+   200
+  ]
+ },
+ "apocalypse_solar_panel": {
+  "base": [
+   225,
+   105,
+   25
+  ],
+  "light": [
+   70,
+   15,
+   10
+  ],
+  "dark": [
+   255,
+   200,
+   120
+  ]
+ },
+ "heavens_end_solar_panel": {
+  "base": [
+   115,
+   45,
+   165
+  ],
+  "light": [
+   25,
+   10,
+   45
+  ],
+  "dark": [
+   230,
+   205,
+   250
   ]
  }
 }

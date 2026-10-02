@@ -1,0 +1,310 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<title>玻璃电缆像素编辑器 — 16×16 模板设计</title>
+<style>
+  :root {
+    --bg: #1a1d22; --panel: #22262d; --panel2: #2a2f38;
+    --text: #dfe6ee; --dim: #8b94a3; --accent: #4fd1c5;
+    --canvas: #171a1f;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    background: var(--bg); color: var(--text);
+    font-family: "Segoe UI", "Microsoft YaHei", sans-serif;
+    display: flex; gap: 18px; padding: 18px; min-height: 100vh;
+  }
+  /* ---------- 左侧:画布 ---------- */
+  #left { flex: 0 0 auto; display: flex; flex-direction: column; gap: 12px; align-items: center; }
+  #canvasWrap {
+    position: relative; background: var(--canvas);
+    border: 2px solid var(--panel2); border-radius: 6px;
+    display: flex; align-items: center; justify-content: center;
+    width: 544px; height: 544px;
+  }
+  canvas { image-rendering: pixelated; cursor: crosshair; }
+  #hoverInfo { color: var(--dim); font-size: 13px; min-height: 18px; }
+  .btnrow { display: flex; gap: 8px; flex-wrap: wrap; justify-content: center; }
+  button {
+    background: var(--panel2); color: var(--text); border: 1px solid #3a4150;
+    border-radius: 5px; padding: 7px 14px; cursor: pointer; font-size: 13px;
+  }
+  button:hover { border-color: var(--accent); color: var(--accent); }
+  button.primary { background: var(--accent); color: #10262a; border: none; font-weight: 600; }
+  button.primary:hover { filter: brightness(1.1); color: #10262a; }
+  /* ---------- 右侧:面板 ---------- */
+  #right { flex: 1; display: flex; flex-direction: column; gap: 14px; min-width: 340px; }
+  .card { background: var(--panel); border-radius: 8px; padding: 14px; }
+  .card h2 { font-size: 14px; color: var(--accent); margin-bottom: 10px; font-weight: 600; }
+  .roles { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; }
+  .role {
+    border: 2px solid transparent; border-radius: 6px; padding: 6px;
+    cursor: pointer; text-align: center; background: var(--panel2);
+  }
+  .role.active { border-color: var(--accent); }
+  .role .swatch { width: 100%; height: 34px; border-radius: 4px; margin-bottom: 4px;
+    background-image:
+      linear-gradient(45deg, #555 25%, transparent 25%, transparent 75%, #555 75%),
+      linear-gradient(45deg, #555 25%, transparent 25%, transparent 75%, #555 75%);
+    background-size: 12px 12px; background-position: 0 0, 6px 6px;
+    background-color: #333;
+  }
+  .role .swatch span { display: block; width: 100%; height: 100%; border-radius: 3px; }
+  .role .name { font-size: 12px; }
+  .role .key { font-size: 11px; color: var(--dim); }
+  .hint { font-size: 12px; color: var(--dim); line-height: 1.7; }
+  .hint b { color: var(--text); }
+  textarea {
+    width: 100%; height: 240px; background: var(--canvas); color: #9fd8b0;
+    border: 1px solid #3a4150; border-radius: 6px; padding: 10px;
+    font-family: Consolas, monospace; font-size: 13px; line-height: 1.25;
+    resize: vertical; white-space: pre;
+  }
+  #exportOut { height: 130px; color: #f0c674; }
+  .legend { display: flex; flex-wrap: wrap; gap: 6px; }
+  .legend .chip {
+    font-size: 11px; padding: 3px 8px; border-radius: 10px;
+    background: var(--panel2); color: var(--dim);
+  }
+</style>
+</head>
+<body>
+
+<div id="left">
+  <div id="canvasWrap"><canvas id="cv" width="512" height="512"></canvas></div>
+  <div id="hoverInfo">移动鼠标查看坐标</div>
+  <div class="btnrow">
+    <button class="primary" id="btnExport">生成布局（复制到剪贴板）</button>
+    <button id="btnImport">从文本导入</button>
+    <button id="btnReset">重置为当前布局</button>
+    <button id="btnClear">清空</button>
+    <button id="btnSymH">左右对称</button>
+    <button id="btnSymV">上下对称</button>
+    <button id="btnSymQ">四面对称</button>
+  </div>
+</div>
+
+<div id="right">
+  <div class="card">
+    <h2>画笔（点击角色选中，快捷键 1-7 / E 刻）</h2>
+    <div class="roles" id="roles"></div>
+  </div>
+
+  <div class="card">
+    <h2>操作说明</h2>
+    <div class="hint">
+      <b>左键</b> 画 / <b>右键</b> 擦除（透明）· <b>拖动</b> 连续绘制 ·
+      <b>Shift+点击</b> 直线填充 · 滚轮/+- 无需，16×16 固定。<br>
+      画的是 <b>模板</b>（角色字符），不是最终颜色——同一模板会按 24 档电缆各自的
+      面板配色渲染。<b>中心 2×2 的 W</b>（白色能量节点）与 <b>N</b>（四角灰点）是固定色。
+    </div>
+  </div>
+
+  <div class="card">
+    <h2>模板文本（可手动编辑，16 行 × 16 字符）</h2>
+    <textarea id="tmpl" spellcheck="false"></textarea>
+    <div class="btnrow" style="margin-top:8px">
+      <button id="btnApplyText">应用文本 → 画布</button>
+      <span class="chip legend" id="rowCount"></span>
+    </div>
+  </div>
+
+  <div class="card">
+    <h2>导出（完成后点「生成布局」，把剪贴板内容发给我）</h2>
+    <textarea id="exportOut" spellcheck="false" readonly></textarea>
+  </div>
+</div>
+
+<script>
+const CHARS = [
+  {ch:'.', name:'透明镂空', key:'1', color:null},
+  {ch:'E', name:'描边(深)', key:'2', color:'#191b20'},
+  {ch:'M', name:'主体(面板色)', key:'3', color:'#ffd957'},
+  {ch:'B', name:'亮带(泛白)', key:'4', color:'#fff38f'},
+  {ch:'D', name:'深肋(压暗)', key:'5', color:'#bd930f'},
+  {ch:'W', name:'中心白点(固定)', key:'6', color:'#f7f7f7'},
+  {ch:'N', name:'角落灰点(固定)', key:'7', color:'#bfbbc4'},
+];
+const N = 16, CELL = 32;
+const CURRENT = [
+".....DMB.MD.....",
+"..N..DM.BMD...N.",
+".N...DMB.MD..N..",
+".....DM..MD.....",
+".....DM.BMD.....",
+"DDDDDDMB.MDDDDDD",
+"MMMMMMBBBBMMMMMM",
+".B..B.B..B.B..B.",
+"B..B.BB..BB..B.B",
+"MMMMMMBBBBMMMMMM",
+"DDDDDDMB.MDDDDDD",
+".....DM.BMD.....",
+".....DMB.MD.....",
+".N...DM..MD..N..",
+"..N..DM.BMD...N.",
+".....DMB.MD.....",
+];
+
+
+
+let grid = CURRENT.map(r => r.padEnd(N, '.').slice(0, N).split(''));
+let brush = 'M';
+let lastCell = null;      // 拖动连线起点
+let shiftAnchor = null;   // shift 直线
+const cv = document.getElementById('cv');
+const ctx = cv.getContext('2d');
+const info = document.getElementById('hoverInfo');
+const tmplBox = document.getElementById('tmpl');
+
+function charColor(ch) {
+  const def = CHARS.find(c => c.ch === ch);
+  return def && def.color ? def.color : 'transparent';
+}
+function draw() {
+  ctx.clearRect(0, 0, cv.width, cv.height);
+  for (let y = 0; y < N; y++) for (let x = 0; x < N; x++) {
+    const ch = grid[y][x];
+    const def = CHARS.find(c => c.ch === ch);
+    const px = x * CELL, py = y * CELL;
+    if (def && def.color) {
+      ctx.fillStyle = def.color;
+      ctx.fillRect(px, py, CELL, CELL);
+    } else {
+      // 透明棋盘格
+      ctx.fillStyle = ((x + y) % 2) ? '#232830' : '#1b1f26';
+      ctx.fillRect(px, py, CELL, CELL);
+    }
+  }
+  // 网格线
+  ctx.strokeStyle = 'rgba(255,255,255,0.06)';
+  ctx.lineWidth = 1;
+  for (let i = 0; i <= N; i++) {
+    ctx.beginPath(); ctx.moveTo(i*CELL+.5, 0); ctx.lineTo(i*CELL+.5, N*CELL); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(0, i*CELL+.5); ctx.lineTo(N*CELL, i*CELL+.5); ctx.stroke();
+  }
+  // 中心参考线(4px 十字提示电缆臂位置)
+  ctx.strokeStyle = 'rgba(79,209,197,0.25)';
+  ctx.strokeRect(4*CELL+.5, 4*CELL+.5, 8*CELL-1, 8*CELL-1);
+  tmplBox.value = grid.map(r => r.join('')).join('\n');
+  document.getElementById('rowCount').textContent = grid.length + ' 行 × ' + grid[0].length + ' 列';
+}
+function renderRoles() {
+  const box = document.getElementById('roles');
+  box.innerHTML = '';
+  CHARS.forEach(c => {
+    const el = document.createElement('div');
+    el.className = 'role' + (c.ch === brush ? ' active' : '');
+    el.innerHTML = `<div class="swatch"><span style="background:${c.color || 'transparent'};border:1px dashed #666"></span></div>
+                    <div class="name">${c.name}</div><div class="key">${c.ch} · ${c.key}</div>`;
+    el.onclick = () => { brush = c.ch; renderRoles(); };
+    box.appendChild(el);
+  });
+}
+function paint(x, y, ch) {
+  if (x < 0 || y < 0 || x >= N || y >= N) return;
+  grid[y][x] = ch;
+}
+function line(x0, y0, x1, y1, ch) {
+  // Bresenham
+  let dx = Math.abs(x1-x0), dy = -Math.abs(y1-y0);
+  let sx = x0 < x1 ? 1 : -1, sy = y0 < y1 ? 1 : -1, err = dx + dy;
+  while (true) {
+    paint(x0, y0, ch);
+    if (x0 === x1 && y0 === y1) break;
+    const e2 = 2 * err;
+    if (e2 >= dy) { err += dy; x0 += sx; }
+    if (e2 <= dx) { err += dx; y0 += sy; }
+  }
+}
+function cellFromEvent(e) {
+  const r = cv.getBoundingClientRect();
+  const x = Math.floor((e.clientX - r.left) / CELL);
+  const y = Math.floor((e.clientY - r.top) / CELL);
+  return (x >= 0 && y >= 0 && x < N && y < N) ? [x, y] : null;
+}
+cv.addEventListener('contextmenu', e => e.preventDefault());
+cv.addEventListener('mousedown', e => {
+  const c = cellFromEvent(e); if (!c) return;
+  const ch = e.button === 2 ? '.' : brush;
+  if (e.shiftKey && shiftAnchor) {
+    line(shiftAnchor[0], shiftAnchor[1], c[0], c[1], ch);
+    shiftAnchor = null;
+  } else {
+    paint(c[0], c[1], ch);
+    shiftAnchor = e.shiftKey ? c : null;
+    lastCell = c;
+    cv.dataset.painting = '1';
+    cv.dataset.ch = ch;
+  }
+  draw();
+});
+cv.addEventListener('mousemove', e => {
+  const c = cellFromEvent(e);
+  info.textContent = c ? `x=${c[0]} y=${c[1]} 当前:${grid[c[1]][c[0]]}` : '';
+  if (cv.dataset.painting === '1' && c && lastCell) {
+    line(lastCell[0], lastCell[1], c[0], c[1], cv.dataset.ch);
+    lastCell = c;
+    draw();
+  }
+});
+window.addEventListener('mouseup', () => { cv.dataset.painting = '0'; lastCell = null; });
+window.addEventListener('keydown', e => {
+  const def = CHARS.find(c => c.key === e.key);
+  if (def && document.activeElement !== tmplBox) { brush = def.ch; renderRoles(); e.preventDefault(); }
+});
+// 对称工具
+function mirrorH() {
+  grid = grid.map(row => row.map((c, i) => row[N-1-i]));
+  draw();
+}
+function mirrorV() {
+  grid = grid.map((row, i) => grid[N-1-i]);
+  draw();
+}
+document.getElementById('btnSymH').onclick = mirrorH;
+document.getElementById('btnSymV').onclick = mirrorV;
+document.getElementById('btnSymQ').onclick = () => {
+  grid = grid.map((row, y) => row.map((c, x) => grid[Math.min(y, N-1-y)][Math.min(x, N-1-x)]));
+  draw();
+};
+document.getElementById('btnClear').onclick = () => {
+  grid = Array.from({length: N}, () => Array(N).fill('.'));
+  draw();
+};
+document.getElementById('btnReset').onclick = () => {
+  grid = CURRENT.map(r => r.split(''));
+  draw();
+};
+document.getElementById('btnApplyText').onclick = () => {
+  const lines = tmplBox.value.replace(/\r/g, '').split('\n').filter(l => l.length > 0);
+  if (lines.length !== N) { alert('需要 16 行,当前 ' + lines.length + ' 行'); return; }
+  grid = lines.map(l => l.padEnd(N, '.').slice(0, N).split(''));
+  draw();
+};
+document.getElementById('btnExport').onclick = () => {
+  const rows = grid.map(r => r.join(''));
+  const NL = String.fromCharCode(10);
+  const out =
+    '// ===== 主模板(用户设计) =====' + NL
+    + '// 替换 texturegen/gen_cables_iu.py 中 TEMPLATE = [ ... ](注释后 16 行)' + NL
+    + 'TEMPLATE = [' + NL
+    + rows.map(r => '"' + r + '",').join(NL) + NL
+    + ']' + NL
+    + '// 角色: E=描边 M=主体 B=亮带 D=深肋 W=中心白点 N=灰点 .=透明';
+  const outBox = document.getElementById('exportOut');
+  outBox.value = out;
+  navigator.clipboard.writeText(out).then(
+    () => { info.textContent = '✓ 已复制到剪贴板,发给 AI 即可'; },
+    () => { info.textContent = '剪贴板不可用,请手动复制下方文本'; });
+};
+
+document.getElementById('btnImport').onclick = () => {
+  document.getElementById('btnApplyText').click();
+};
+
+renderRoles();
+draw();
+</script>
+</body>
+</html>

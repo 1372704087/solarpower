@@ -14,7 +14,7 @@ DISPLAY = {
 }
 
 CABLES = [
-    "glass_cable", "glass_cable_2", "glass_cable_3", "glass_cable_4",
+    "glass_cable", "glass_cable_2", "ultimate_hybrid_glass_cable", "glass_cable_4",
     "glass_cable_5", "glass_cable_6", "glass_cable_7", "glass_cable_8",
     "glass_cable_9", "glass_cable_10", "glass_cable_11",
 ]
