@@ -2,6 +2,8 @@
 
 > 分子重组仪相关的贴图（14 个合成物品、机器方块、GUI 底图）自 2026-10-01 起
 > 直接采用 ASP（Advanced Solar Panels）原版素材（用户指定），不在本管线生成；
+> SSP 光谱组件族 4 张物品贴图（太阳光分解器 + 红/绿/蓝光谱组件）自 2026-10-03 起
+> 直接采用 SSP（Super Solar Panels）原版素材（用户指定），同样不在本管线生成。
 > 布局坐标见 `MolecularTransformerContainer` / `GuiMolecularTransformer` 注释。
 
 本项目全部太阳能板贴图（15 级 × 顶面/侧面，共 30 张 PNG）由本目录下的脚本生成，
@@ -33,8 +35,18 @@ py gen_sides.py --write
 | `glyphs/<等级>_f0.png` | 侧面图案底图（16×16）：原版机框 + 居中修正后的图案轮廓，仅 gen_sides.py 使用 |
 | `gen_tops.py` | 顶面生成：深色机框 + 3×3 倒角电池片 + 深色缝隙 + 斜向玻璃高光 |
 | `gen_sides.py` | 侧面生成：图案重上色 + 色阶归一化 + 9 帧呼吸动画 |
+| `gen_panes.py` | 「XX玻璃板」物品贴图生成：67 档各一张——直接复用 `gen_tops.py` 的顶面绘制（用户指定，图标=面板顶面）+ 物品模型 JSON |
+| `gen_cores.py` | 「XX核心」生成：用户在拓展版像素编辑器设计的核心主模板逐档着色（M=主题色 D=×0.55，E/B/W/N 固定）66 张 + 物品模型 JSON（2 档起，仿 IU 激发核） |
+| `gen_sunnarium.py` | 「XX阳光化合物」+「XX小块阳光化合物」+「XX阳光合金」生成：以 ASP 三张原版贴图为底逐档改色，3 × 66 张 + 物品模型 JSON。改色算法逐家族指定（用户定稿）：化合物/小块 = v1 色相平移 + 饱和度按主题色缩放（明暗结构原样保留，鲜亮优先）；阳光合金 = v2 亮度斜坡重映射（深→基→亮→高光渐变带，平板结构用 v1 会发白）。（v3 高光调整被否决。）基础档沿用本体；富集阳光化合物/富集阳光合金不动 |
 | `gen_cables.py` | 玻璃电缆生成：11 级贴图 + multipart 方块状态 + 模型/物品模型 |
 | `cable_palettes.json` | 玻璃电缆 11 级配色（提取自 IU 电缆贴图） |
+| `cable_pixel_editor.html` | 素材像素编辑器（16×16 模板设计，浏览器直接打开）。图案：核心/电缆（与
+  `gen_cores.py` / `gen_cables_iu.py` 的 TEMPLATE 同步）+ 储电盒/储电盒侧面/储电盒顶底/变压器/充电座
+  （2026-10-04 用户定：IU 红色素材原图逐像素转写——mfsu_front / mfsu_leftrightback / mfsu_bottomtop /
+  hv_transformer_front / chargepad_mfsu_top，各自带独立调色板，画布即原图配色。IU 里变压器侧面
+  （hv_transformer_side）与充电桩非顶面（front/leftrightback/bottom）与储能仓对应面完全相同，无需另画；
+  导出变量 TEMPLATE_STORAGE_BOX / STORAGE_SIDE / STORAGE_TOPBOTTOM / TEMPLATE_TRANSFORMER /
+  TEMPLATE_CHARGEPAD，生成脚本待对应机器方块落地后创建） |
 | `preview/` | 预览输出（对比图 / 动画 GIF） |
 
 ## 常改参数
