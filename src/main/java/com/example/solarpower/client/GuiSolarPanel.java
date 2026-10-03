@@ -62,25 +62,11 @@ public class GuiSolarPanel extends GuiContainer {
         super.drawScreen(mouseX, mouseY, partialTicks);
         this.renderHoveredToolTip(mouseX, mouseY);
         // 数据行悬停：显示科学计数法约数（词头不好反推大小时用）
-        long t0 = System.nanoTime();
         List<String> hover = this.rowHoverText(mouseX - this.guiLeft, mouseY - this.guiTop);
-        long t1 = System.nanoTime();
         if (hover != null) {
             this.drawHoveringText(hover, mouseX, mouseY, this.fontRenderer);
         }
-        long d2 = System.nanoTime() - t1;
-        if (d2 > perfHoverMax) perfHoverMax = d2;
-        perfHoverNanos += t1 - t0;
-        if (++perfHoverCount >= 300) {
-            System.out.println("[SolarPerf] rowHover calc avg=" + perfHoverNanos / perfHoverCount / 1000
-                    + "us | tooltipDraw max=" + perfHoverMax / 1000 + "us");
-            perfHoverCount = 0; perfHoverNanos = 0; perfHoverMax = 0;
-        }
     }
-
-    private static long perfHoverNanos;
-    private static int perfHoverCount;
-    private static long perfHoverMax;
 
     /** 三行数据行的悬停科学计数法约数；鼠标不在行上或数值太小时返回 null。 */
     @Nullable
@@ -116,7 +102,10 @@ public class GuiSolarPanel extends GuiContainer {
         this.drawTexturedModalRect(this.guiLeft, this.guiTop, 0, 0, PANEL_WIDTH, PANEL_HEIGHT);
 
         SolarTier tier = this.container.getTile().getTier();
-        BigDecimal capacity = new BigDecimal(tier.capacityEu());
+        // 容量用「紧凑镜像」而不是精确容量：本档容量最高约 270 万位，与只有 4 位有效数字的
+        // 蓄电量做 BigDecimal 比较/除法时，JDK 会把它完整物化，实测 240~500 ms/次，
+        // 而这里是每帧路径。镜像保留 18 位有效数字，比例误差 < 1e-15，像素结果一致。
+        BigDecimal capacity = tier.capacityMirror();
         int filled;
         if (capacity.signum() <= 0 || this.container.stored.signum() <= 0) {
             filled = 0;

@@ -1,0 +1,10 @@
+{
+  "variants": {
+    "": {
+      "model": "solarpower:block/supreme_void_glass_cable_core"
+    },
+    "normal": {
+      "model": "solarpower:block/supreme_void_glass_cable_core"
+    }
+  }
+}

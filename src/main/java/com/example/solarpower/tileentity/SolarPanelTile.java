@@ -29,6 +29,7 @@ import net.minecraftforge.fml.common.Optional;
 
 import java.math.BigDecimal;
 import java.math.BigInteger;
+import java.util.Base64;
 
 /**
  * 太阳能板方块实体（1.12.2，全档位共用）。
@@ -51,6 +52,7 @@ public class SolarPanelTile extends TileEntity implements ITickable, IEnergySour
     private static final BigInteger RAIN_DENOMINATOR = BigInteger.valueOf(100L);
 
     private static final String TAG_ENERGY = "Energy";
+    private static final String TAG_ENERGY_B64 = TAG_ENERGY + "_b64";
     /** NBT 字符串标签类型（{@link NBTTagCompound#hasKey(String, int)} 用）。 */
     private static final int NBT_STRING = 8;
 
@@ -338,28 +340,31 @@ public class SolarPanelTile extends TileEntity implements ITickable, IEnergySour
     }
 
     private void pushToCables() {
-        for (EnumFacing dir : EnumFacing.values()) {
-            BlockPos side = this.pos.offset(dir);
-            TileEntity be = this.world.getTileEntity(side);
-            if (be instanceof GlassCableTile) {
-                // 同 tick 内首次调用会 BFS 整张网，之后同网络的面板直接命中缓存
-                EuCableNet.push(this.world, side, this.storage, this.getTier().voltage());
-            }
-        }
+        // 四周相邻电缆的扫描由 EuCableNet.push 负责：**每个相邻电缆面各推流一次**。
+        // 面板贴着同一张网的多个面时，该网每 tick 会收到多次推流（推送量按面数放大，
+        // 最多 6 倍）——这是刻意保留的原始放电行为，不做按网络归并。
+        // 同 tick 内首次调用会 BFS 整张网，之后同网络的面板直接命中缓存。
+        EuCableNet.push(this.world, this.pos, this.storage, this.getTier().voltage(),
+                this.getTier().maxOutputEu());
     }
 
     @Override
     public void readFromNBT(NBTTagCompound compound) {
         super.readFromNBT(compound);
         BigInteger stored;
-        if (compound.hasKey(TAG_ENERGY, NBT_STRING)) {
+        if (compound.hasKey(TAG_ENERGY_B64, NBT_STRING)) {
+            // 新格式：Base64 大端补码，编解码都是线性开销（巨数 toString 是平方级）
+            stored = new BigInteger(Base64.getDecoder()
+                    .decode(compound.getString(TAG_ENERGY_B64)));
+        } else if (compound.hasKey(TAG_ENERGY, NBT_STRING)) {
             try {
+                // 旧格式：十进制串（一次性解析，仅兼容迁移用）
                 stored = new BigInteger(compound.getString(TAG_ENERGY));
             } catch (NumberFormatException e) {
                 stored = BigInteger.ZERO;
             }
         } else {
-            // 兼容旧存档：此前以 long 保存
+            // 兼容更旧存档：此前以 long 保存
             stored = BigInteger.valueOf(compound.getLong(TAG_ENERGY));
         }
         this.storage.setStored(stored);
@@ -368,7 +373,7 @@ public class SolarPanelTile extends TileEntity implements ITickable, IEnergySour
     @Override
     public NBTTagCompound writeToNBT(NBTTagCompound compound) {
         super.writeToNBT(compound);
-        compound.setString(TAG_ENERGY, this.storage.storedAsString());
+        compound.setString(TAG_ENERGY_B64, this.storage.storedAsBase64());
         return compound;
     }
 
@@ -382,6 +387,15 @@ public class SolarPanelTile extends TileEntity implements ITickable, IEnergySour
         /** displayParts 缓存：同上，按 stored 引用命中（stored 每 tick 至多变一次）。 */
         private BigInteger partsFor;
         private int[] partsCache;
+        /** 剩余容量缓存：按「存量实例 + 容量实例」作失效令牌。
+         *  <p>{@link BigInteger} 不可变，任何写入都会把 stored 换成新实例，因此实例身份
+         *  就是可靠的失效依据；容量取自 {@link SolarTier} 的 final 字段，实例恒定。
+         *  <p>电缆网络每 tick 会对同一块面板反复询问剩余容量（源与汇两侧都要），
+         *  满仓时若不做缓存，每次都要对一个百万位数做 O(带宽) 的相减——
+         *  实测顶档（2^8990097）每面每次 0.31 ms，六面就吃掉 2 ms/tick。 */
+        private BigInteger roomForStored;
+        private BigInteger roomForCapacity;
+        private BigInteger roomCache = BigInteger.ZERO;
 
         @Override
         public BigInteger getStoredEu() {
@@ -391,6 +405,20 @@ public class SolarPanelTile extends TileEntity implements ITickable, IEnergySour
         @Override
         public BigInteger getCapacityEu() {
             return SolarPanelTile.this.getTier().capacityEu();
+        }
+
+        /** 剩余可注入量（带缓存，见字段注释）。稳态下整 tick 命中，退化为引用比较。 */
+        @Override
+        public BigInteger getRoomEu() {
+            BigInteger capacity = getCapacityEu();
+            BigInteger stored = this.stored;
+            if (this.roomForCapacity == capacity && this.roomForStored == stored) {
+                return this.roomCache;
+            }
+            this.roomForCapacity = capacity;
+            this.roomForStored = stored;
+            this.roomCache = capacity.subtract(stored).max(BigInteger.ZERO);
+            return this.roomCache;
         }
 
         @Override
@@ -404,7 +432,7 @@ public class SolarPanelTile extends TileEntity implements ITickable, IEnergySour
                     || !SolarPanelTile.this.getTier().voltage().accepts(tier)) {
                 return BigInteger.ZERO;
             }
-            BigInteger accepted = amount.min(getCapacityEu().subtract(this.stored));
+            BigInteger accepted = amount.min(getRoomEu());
             if (accepted.signum() <= 0) {
                 return BigInteger.ZERO;
             }
@@ -431,11 +459,12 @@ public class SolarPanelTile extends TileEntity implements ITickable, IEnergySour
             return extracted;
         }
 
-        /** 存量的十进制串（惰性缓存；自动存档周期性取用）。 */
-        String storedAsString() {
+        /** 存量的 Base64 串（大端补码，编解码线性开销；惰性缓存；自动存档周期性取用）。
+         *  十进制 toString 对百万位大数是平方级开销，存档会卡数秒，故不再使用。 */
+        String storedAsBase64() {
             if (this.stringFor != this.stored) {
                 this.stringFor = this.stored;
-                this.stringCache = this.stored.toString();
+                this.stringCache = Base64.getEncoder().encodeToString(this.stored.toByteArray());
             }
             return this.stringCache;
         }

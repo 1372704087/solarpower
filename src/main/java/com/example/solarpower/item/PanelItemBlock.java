@@ -43,6 +43,7 @@ public class PanelItemBlock extends ItemBlock {
         // 均为档位常量，走 SolarTier 的惰性缓存（按对象身份命中的 EuFormat 缓存对这里也会命中）
         tooltip.add(I18n.format("tooltip.solarpower.day_gen", tier.generationAnnotated()));
         tooltip.add(I18n.format("tooltip.solarpower.night_gen", tier.nightGenerationAnnotated()));
+        tooltip.add(I18n.format("tooltip.solarpower.max_output", tier.maxOutputAnnotated()));
         tooltip.add(I18n.format("tooltip.solarpower.capacity", tier.capacityAnnotated()));
     }
 }

@@ -1,0 +1,6 @@
+{
+  "parent": "builtin/generated",
+  "textures": {
+    "layer0": "solarpower:item/photonic_glass_pane"
+  }
+}

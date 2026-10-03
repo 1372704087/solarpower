@@ -1,0 +1,10 @@
+{
+  "variants": {
+    "": {
+      "model": "solarpower:block/cosmic_string_glass_cable_core"
+    },
+    "normal": {
+      "model": "solarpower:block/cosmic_string_glass_cable_core"
+    }
+  }
+}

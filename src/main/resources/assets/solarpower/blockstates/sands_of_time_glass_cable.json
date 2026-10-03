@@ -1,0 +1,10 @@
+{
+  "variants": {
+    "": {
+      "model": "solarpower:block/sands_of_time_glass_cable_core"
+    },
+    "normal": {
+      "model": "solarpower:block/sands_of_time_glass_cable_core"
+    }
+  }
+}

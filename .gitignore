@@ -41,3 +41,6 @@ forge-1.12.2/
 # Python 缓存
 __pycache__/
 *.pyc
+
+# texturegen 一次性校验输出(本地看看即可)
+texturegen/verify_*.txt

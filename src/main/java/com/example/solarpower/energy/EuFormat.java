@@ -139,15 +139,51 @@ public final class EuFormat {
         return head.charAt(0) + "." + head.substring(1) + "e" + e;
     }
 
-    /** 大数 → {首 4 位有效数字, 十进制指数}，供容器窗口属性同步；快速路径，无 toString。 */
+    /** long 的十进制位数（精确：log10 在 10 的整数幂上会因浮点误差少 1）。 */
+    private static int digitsOf(long v) {
+        return Long.toString(v).length();
+    }
+
+    /**
+     * 巨数的「紧凑镜像」：只保留前 n 位有效数字（高位截断），数值量级不变，O(1) 构造。
+     * <p>用途：界面侧的镜像值只有 4 位有效数字，而档位常量是精确巨数——最高档
+     * 2^8990097 约 270 万位十进制。直接拿两者做 {@link BigDecimal#compareTo} 或
+     * {@link BigDecimal#divide} 时，JDK 会把两边补到同一 scale，把巨数完整物化出来：
+     * 实测一次 240 ms（divide）/ 约 500 ms（compareTo），界面每帧都做 ⇒ 面板完全卡死。
+     * 把巨数也压成同量级的紧凑镜像后，比较与除法都退化成 long 运算（实测 0.0006 ms）。
+     *
+     * @param n 保留的有效位数，1..18（受 long 限制）
+     */
+    public static BigDecimal compactMirror(BigInteger value, int n) {
+        if (value == null || value.signum() <= 0) {
+            return BigDecimal.ZERO;
+        }
+        int want = Math.max(1, Math.min(n, 18));
+        int e = decimalExponent(value);
+        if (e + 1 < want) {
+            want = e + 1;               // 数值本身不足 want 位：此时镜像即精确值
+        }
+        // 取前 want 位十进制数字必须走真正的十进制除法：用移位取高位得到的是「2 的幂」缩放，
+        // 换算成十进制还需要乘回 2^k，直接取它的十进制数字会得到错误结果。
+        // 这里商的位宽只有 want（≤ 18）位，JDK 会走 Knuth 除法（商的字数为 1），
+        // 代价约 O(被除数位宽) —— 每个档位只算一次并缓存。
+        long mantissa = value.divide(pow10(e - want + 1)).longValue();
+        return BigDecimal.valueOf(mantissa).scaleByPowerOfTen(e - digitsOf(mantissa) + 1);
+    }
+
+    /** 大数 → {首 4 位有效数字, 十进制指数}，供容器窗口属性同步（每 tick 一次，持有方按引用缓存）。
+     *  <p>直接做一次精确整除：商的位宽只有 4 位，JDK 会走 Knuth 除法（商的字数为 1），
+     *  代价是 O(被除数位宽)，不是平方级 —— 实测 270 万位约 0.7 ms。
+     *  <p>曾试过「取最高 60 位做估计 + 线性校正」以避免这次除法，但 {@code shiftRight}
+     *  得到的是「2 的幂」缩放，换算成十进制还差一个因子：实测估计值偏高 5.6 倍，
+     *  远超 ±8 的校正上限，于是每次都白做 8 次巨数乘法再落到精确除法兜底 —— 整体反而慢约 4 倍。 */
     public static int[] displayParts(BigInteger value) {
         if (value == null || value.signum() <= 0) {
             return new int[]{0, 0};
         }
         int e = decimalExponent(value);
         int want = Math.min(4, e + 1);
-        BigInteger head = value.divide(pow10(e - want + 1));
-        return new int[]{head.intValue(), e};
+        return new int[]{value.divide(pow10(e - want + 1)).intValue(), e};
     }
 
     /**
@@ -222,10 +258,11 @@ public final class EuFormat {
         // 但真有效位数只有 1 —— 直接拿 precision 推组号会把 10^3000 算成 990 组而非 1000 组，
         // 于是同一块面板会因数值来源不同而显示不同的词头。
         BigDecimal v = value.stripTrailingZeros();
-        if (v.scale() < 0) {
-            // 纯整数（如 1E+37）：转成 scale=0，避免后续 movePointLeft 压出负 scale
-            v = v.setScale(0);
-        }
+        // 十进制指数直接取「precision - scale - 1」，**不要**先把 scale 归零：
+        // 归零会把「4 位尾数 × 10^k」物化成完整的十进制整数。本模组最高档发电量是
+        // 2^8990097（约 270 万位），一次 setScale(0) 实测 246 ms，紧随其后的 setScale(2)
+        // 再花 243 ms —— 界面每帧调用两次 formatEu，合计 1.2 s/帧，面板完全无法使用。
+        // 不归零时后续 movePointLeft 只搬动 scale（O(1)），尾数始终是紧凑的 4 位数。
         int exponent = v.precision() - v.scale() - 1;
         if (exponent < 0) {
             // < 1 的值不在 EU 的取值域内（能量恒为非负整数），但真出现时直接原样输出，

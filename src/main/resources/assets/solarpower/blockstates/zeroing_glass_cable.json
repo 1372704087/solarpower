@@ -1,0 +1,10 @@
+{
+  "variants": {
+    "": {
+      "model": "solarpower:block/zeroing_glass_cable_core"
+    },
+    "normal": {
+      "model": "solarpower:block/zeroing_glass_cable_core"
+    }
+  }
+}
