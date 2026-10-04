@@ -44,3 +44,6 @@ __pycache__/
 
 # texturegen 一次性校验输出(本地看看即可)
 texturegen/verify_*.txt
+
+# ZCode 本地会话文件
+.zcode/
