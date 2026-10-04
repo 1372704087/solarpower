@@ -2,6 +2,7 @@ package com.example.solarpower.tileentity;
 
 import com.example.solarpower.block.TransformerBlock;
 import com.example.solarpower.energy.EuCableNet;
+import com.example.solarpower.energy.EuFormat;
 import com.example.solarpower.energy.FeConvert;
 import com.example.solarpower.energy.IEuEnergy;
 import com.example.solarpower.energy.EuTier;
@@ -56,6 +57,30 @@ public class TransformerTile extends TileEntity implements ITickable, IEuEnergy,
     private BigInteger comparatorForHigh;
     private int comparatorCache;
 
+    /** 池存量显示分量缓存（容器每秒取用 20 次，池存量每 tick 至多变一次）。 */
+    private BigInteger lowPartsFor;
+    private int[] lowPartsCache;
+    private BigInteger highPartsFor;
+    private int[] highPartsCache;
+
+    /** 低压池存量的显示分量（首 4 位有效数字 + 十进制指数，惰性缓存）。 */
+    public int[] getLowDisplayParts() {
+        if (this.lowPartsFor != this.lowStored) {
+            this.lowPartsFor = this.lowStored;
+            this.lowPartsCache = EuFormat.displayParts(this.lowStored);
+        }
+        return this.lowPartsCache;
+    }
+
+    /** 高压池存量的显示分量（同上）。 */
+    public int[] getHighDisplayParts() {
+        if (this.highPartsFor != this.highStored) {
+            this.highPartsFor = this.highStored;
+            this.highPartsCache = EuFormat.displayParts(this.highStored);
+        }
+        return this.highPartsCache;
+    }
+
     /** 档位由所在方块的实例决定（懒解析，回落 LV）。 */
     public EuTier lowTier() {
         if (this.lowTierCache == null && this.hasWorld()) {
@@ -82,7 +107,8 @@ public class TransformerTile extends TileEntity implements ITickable, IEuEnergy,
         return this.rateCache;
     }
 
-    private BigInteger poolCapacity() {
+    /** 池容量 = 吞吐 ×8（缓冲，不做储能）。 */
+    public BigInteger poolCapacity() {
         return rate().shiftLeft(3);   // 吞吐 ×8
     }
 

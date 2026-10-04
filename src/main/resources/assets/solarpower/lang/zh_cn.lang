@@ -639,3 +639,9 @@ tile.solarpower.l62_transformer.name=L62 变压器
 tile.solarpower.l63_transformer.name=L63 变压器
 tile.solarpower.l64_transformer.name=L64 变压器
 tile.solarpower.l65_transformer.name=L65 变压器
+
+# ===== 变压器 GUI =====
+gui.solarpower.transformer.low=低压池（%s）：%s / %s EU
+gui.solarpower.transformer.high=高压池（%s）：%s / %s EU
+gui.solarpower.transformer.rate=吞吐：%s EU/t（双向）
+gui.solarpower.transformer.voltage=电压：%s ↔ %s

@@ -1,6 +1,7 @@
 package com.example.solarpower.block;
 
 import com.example.solarpower.SolarPower;
+import com.example.solarpower.client.GuiHandler;
 import com.example.solarpower.energy.EuTier;
 import com.example.solarpower.tileentity.TransformerTile;
 
@@ -11,6 +12,7 @@ import net.minecraft.block.properties.PropertyDirection;
 import net.minecraft.block.state.BlockStateContainer;
 import net.minecraft.block.state.IBlockState;
 import net.minecraft.entity.EntityLivingBase;
+import net.minecraft.entity.player.EntityPlayer;
 import net.minecraft.item.ItemStack;
 import net.minecraft.tileentity.TileEntity;
 import net.minecraft.util.EnumBlockRenderType;
@@ -24,8 +26,8 @@ import javax.annotation.Nullable;
 /**
  * 变压器方块（1.12.2，65 档，桥接电压 T↔T+1）。
  * 带水平 {@link #FACING}：正面（能量芯）= 高压侧（T+1），其余五面 = 低压侧（T）。
- * 放置时正面朝向玩家。转换逻辑全在 {@link TransformerTile}；无 GUI、无模式开关
- * （IC2 语义：按进电方向自动升/降压）。
+ * 放置时正面朝向玩家。转换逻辑全在 {@link TransformerTile}；无模式开关
+ * （IC2 语义：按进电方向自动升/降压），右键打开双池条界面。
  */
 public class TransformerBlock extends BlockContainer {
 
@@ -72,6 +74,23 @@ public class TransformerBlock extends BlockContainer {
                                             EntityLivingBase placer, EnumHand hand) {
         return this.getDefaultState().withProperty(FACING,
                 placer.getHorizontalFacing().getOpposite());
+    }
+
+    /** 右键打开界面（双池条 + 吞吐/电压信息）。 */
+    @Override
+    public boolean onBlockActivated(World worldIn, BlockPos pos, IBlockState state,
+                                    EntityPlayer playerIn, EnumHand hand, EnumFacing facing,
+                                    float hitX, float hitY, float hitZ) {
+        if (worldIn.isRemote) {
+            return true;
+        }
+        TileEntity te = worldIn.getTileEntity(pos);
+        if (te instanceof TransformerTile) {
+            playerIn.openGui(SolarPower.instance, GuiHandler.GUI_TRANSFORMER,
+                    worldIn, pos.getX(), pos.getY(), pos.getZ());
+            return true;
+        }
+        return false;
     }
 
     @Override
