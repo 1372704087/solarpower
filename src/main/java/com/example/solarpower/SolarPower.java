@@ -12,6 +12,8 @@ import com.example.solarpower.tileentity.GlassCableTile;
 import com.example.solarpower.tileentity.MolecularTransformerTile;
 import com.example.solarpower.tileentity.SolarPanelTile;
 import com.example.solarpower.tileentity.StorageBoxTile;
+import com.example.solarpower.tileentity.TransformerTile;
+import com.example.solarpower.energy.EuTier;
 
 import net.minecraft.creativetab.CreativeTabs;
 import net.minecraft.item.Item;
@@ -59,6 +61,12 @@ public final class SolarPower {
             for (SolarTier tier : SolarTier.values()) {
                 items.add(new ItemStack(ModItems.storageBoxItem(tier)));
             }
+            for (EuTier tier : EuTier.values()) {
+                Item transformer = ModItems.transformerItem(tier);
+                if (transformer != null) {
+                    items.add(new ItemStack(transformer));
+                }
+            }
             for (GlassCableTier tier : GlassCableTier.values()) {
                 items.add(new ItemStack(ModItems.cableItem(tier)));
             }
@@ -79,6 +87,8 @@ public final class SolarPower {
                 new ResourceLocation(MODID, "molecular_transformer"));
         GameRegistry.registerTileEntity(StorageBoxTile.class,
                 new ResourceLocation(MODID, "storage_box"));
+        GameRegistry.registerTileEntity(TransformerTile.class,
+                new ResourceLocation(MODID, "transformer"));
     }
 
     @EventHandler

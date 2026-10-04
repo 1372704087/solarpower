@@ -1,6 +1,7 @@
 package com.example.solarpower.client;
 
 import com.example.solarpower.SolarPower;
+import com.example.solarpower.energy.EuTier;
 import com.example.solarpower.registry.ModBlocks;
 import com.example.solarpower.registry.ModItems;
 import com.example.solarpower.solar.GlassCableTier;
@@ -38,6 +39,13 @@ public final class ClientModelRegistry {
         }
         for (SolarTier tier : SolarTier.values()) {
             Item item = ModItems.storageBoxItem(tier);
+            if (item != null) {
+                ModelLoader.setCustomModelResourceLocation(item, 0,
+                        new ModelResourceLocation(item.getRegistryName(), "inventory"));
+            }
+        }
+        for (EuTier tier : EuTier.values()) {
+            Item item = ModItems.transformerItem(tier);
             if (item != null) {
                 ModelLoader.setCustomModelResourceLocation(item, 0,
                         new ModelResourceLocation(item.getRegistryName(), "inventory"));

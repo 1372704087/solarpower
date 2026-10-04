@@ -1,0 +1,22 @@
+{
+  "variants": {
+    "facing=north": {
+      "model": "solarpower:block/l29_transformer"
+    },
+    "facing=east": {
+      "model": "solarpower:block/l29_transformer",
+      "y": 90
+    },
+    "facing=south": {
+      "model": "solarpower:block/l29_transformer",
+      "y": 180
+    },
+    "facing=west": {
+      "model": "solarpower:block/l29_transformer",
+      "y": 270
+    },
+    "normal": {
+      "model": "solarpower:block/l29_transformer"
+    }
+  }
+}

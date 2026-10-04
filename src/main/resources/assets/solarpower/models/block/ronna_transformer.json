@@ -1,0 +1,12 @@
+{
+  "parent": "block/cube",
+  "textures": {
+    "north": "solarpower:block/ronna_transformer_front",
+    "south": "solarpower:block/ronna_transformer_side",
+    "east": "solarpower:block/ronna_transformer_side",
+    "west": "solarpower:block/ronna_transformer_side",
+    "up": "solarpower:block/ronna_transformer_side",
+    "down": "solarpower:block/ronna_transformer_side",
+    "particle": "solarpower:block/ronna_transformer_side"
+  }
+}

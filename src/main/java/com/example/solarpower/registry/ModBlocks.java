@@ -5,6 +5,8 @@ import com.example.solarpower.block.GlassCableBlock;
 import com.example.solarpower.block.MolecularTransformerBlock;
 import com.example.solarpower.block.SolarPanelBlock;
 import com.example.solarpower.block.StorageBoxBlock;
+import com.example.solarpower.block.TransformerBlock;
+import com.example.solarpower.energy.EuTier;
 import com.example.solarpower.solar.GlassCableTier;
 import com.example.solarpower.solar.SolarTier;
 
@@ -23,6 +25,7 @@ public final class ModBlocks {
     private static final Map<SolarTier, SolarPanelBlock> PANELS = new EnumMap<>(SolarTier.class);
     private static final Map<GlassCableTier, GlassCableBlock> CABLES = new EnumMap<>(GlassCableTier.class);
     private static final Map<SolarTier, StorageBoxBlock> STORAGE_BOXES = new EnumMap<>(SolarTier.class);
+    private static final Map<EuTier, TransformerBlock> TRANSFORMERS = new EnumMap<>(EuTier.class);
     private static MolecularTransformerBlock molecularTransformer;
 
     @SubscribeEvent
@@ -50,6 +53,17 @@ public final class ModBlocks {
             event.getRegistry().register(block);
             STORAGE_BOXES.put(tier, block);
         }
+        // 变压器 65 档：桥接电压 T↔T+1（T=1..65），id = 电压枚举小写 + _transformer
+        for (EuTier tier : EuTier.values()) {
+            if (tier.iuTier() > 65) {
+                continue;
+            }
+            TransformerBlock block = new TransformerBlock(tier);
+            block.setRegistryName(SolarPower.MODID, tier.name().toLowerCase() + "_transformer");
+            block.setUnlocalizedName(SolarPower.MODID + "." + tier.name().toLowerCase() + "_transformer");
+            event.getRegistry().register(block);
+            TRANSFORMERS.put(tier, block);
+        }
         molecularTransformer = new MolecularTransformerBlock();
         molecularTransformer.setRegistryName(SolarPower.MODID, "molecular_transformer");
         molecularTransformer.setUnlocalizedName(SolarPower.MODID + ".molecular_transformer");
@@ -66,6 +80,10 @@ public final class ModBlocks {
 
     public static StorageBoxBlock storageBox(SolarTier tier) {
         return STORAGE_BOXES.get(tier);
+    }
+
+    public static TransformerBlock transformer(EuTier tier) {
+        return TRANSFORMERS.get(tier);
     }
 
     public static MolecularTransformerBlock molecularTransformer() {

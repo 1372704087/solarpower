@@ -1,0 +1,12 @@
+{
+  "parent": "block/cube",
+  "textures": {
+    "north": "solarpower:block/uxv_transformer_front",
+    "south": "solarpower:block/uxv_transformer_side",
+    "east": "solarpower:block/uxv_transformer_side",
+    "west": "solarpower:block/uxv_transformer_side",
+    "up": "solarpower:block/uxv_transformer_side",
+    "down": "solarpower:block/uxv_transformer_side",
+    "particle": "solarpower:block/uxv_transformer_side"
+  }
+}

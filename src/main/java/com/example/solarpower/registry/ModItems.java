@@ -3,6 +3,7 @@ package com.example.solarpower.registry;
 import com.example.solarpower.SolarPower;
 import com.example.solarpower.block.GlassCableBlock;
 import com.example.solarpower.block.SolarPanelBlock;
+import com.example.solarpower.energy.EuTier;
 import com.example.solarpower.item.CableItemBlock;
 import com.example.solarpower.item.PanelItemBlock;
 import com.example.solarpower.solar.GlassCableTier;
@@ -28,6 +29,7 @@ public final class ModItems {
     private static final Map<SolarTier, Item> PANEL_ITEMS = new EnumMap<>(SolarTier.class);
     private static final Map<GlassCableTier, Item> CABLE_ITEMS = new EnumMap<>(GlassCableTier.class);
     private static final Map<SolarTier, Item> STORAGE_BOX_ITEMS = new EnumMap<>(SolarTier.class);
+    private static final Map<EuTier, Item> TRANSFORMER_ITEMS = new EnumMap<>(EuTier.class);
     private static final Map<SolarTier, Item> PANE_ITEMS = new EnumMap<>(SolarTier.class);
     private static final Map<SolarTier, Item> SUNNARIUM_ITEMS = new EnumMap<>(SolarTier.class);
     private static final Map<SolarTier, Item> SUNNARIUM_PART_ITEMS = new EnumMap<>(SolarTier.class);
@@ -70,6 +72,17 @@ public final class ModItems {
             item.setCreativeTab(SolarPower.CREATIVE_TAB);
             event.getRegistry().register(item);
             STORAGE_BOX_ITEMS.put(tier, item);
+        }
+        // 变压器的方块物品
+        for (EuTier tier : EuTier.values()) {
+            if (tier.iuTier() > 65) {
+                continue;
+            }
+            Item item = new ItemBlock(ModBlocks.transformer(tier)).setRegistryName(
+                    SolarPower.MODID, tier.name().toLowerCase() + "_transformer");
+            item.setCreativeTab(SolarPower.CREATIVE_TAB);
+            event.getRegistry().register(item);
+            TRANSFORMER_ITEMS.put(tier, item);
         }
         // 分子重组仪的方块物品
         Item transformer = new ItemBlock(ModBlocks.molecularTransformer()).setRegistryName(
@@ -152,6 +165,10 @@ public final class ModItems {
 
     public static Item storageBoxItem(SolarTier tier) {
         return STORAGE_BOX_ITEMS.get(tier);
+    }
+
+    public static Item transformerItem(EuTier tier) {
+        return TRANSFORMER_ITEMS.get(tier);
     }
 
     /** 按注册名取合成链物品（配方表使用）。 */

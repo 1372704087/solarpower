@@ -3,6 +3,7 @@ package com.example.solarpower.energy;
 import com.example.solarpower.tileentity.GlassCableTile;
 import com.example.solarpower.tileentity.SolarPanelTile;
 import com.example.solarpower.tileentity.StorageBoxTile;
+import com.example.solarpower.tileentity.TransformerTile;
 import com.example.solarpower.solar.GlassCableTier;
 
 import net.minecraft.tileentity.TileEntity;
@@ -288,6 +289,10 @@ public final class EuCableNet {
                         && sourceSeen.add(side)) {
                     sources.add(side);
                 }
+                // 变压器：任一面都可作为抽取源（FE 桥 drain 用；它自身转按 receiveEu 分流进池）
+                if (be instanceof TransformerTile && sourceSeen.add(side)) {
+                    sources.add(side);
+                }
                 if (be instanceof IEuEnergy && sinkSeen.add(side)) {
                     sinkCandidates.add(side);
                 }
@@ -325,7 +330,7 @@ public final class EuCableNet {
         return demand;
     }
 
-    /** 网络相邻源的存量之和（太阳能板 + 正面朝向网络的储电盒）。 */
+    /** 网络相邻源的存量之和（太阳能板 + 储电盒 + 变压器双池）。 */
     private static BigInteger storedOf(World world, Net net) {
         BigInteger total = BigInteger.ZERO;
         for (BlockPos pos : net.sources()) {
@@ -334,6 +339,8 @@ public final class EuCableNet {
                 total = total.add(((SolarPanelTile) be).getEnergy().getStoredEu());
             } else if (be instanceof StorageBoxTile) {
                 total = total.add(((StorageBoxTile) be).getStoredEu());
+            } else if (be instanceof TransformerTile) {
+                total = total.add(((TransformerTile) be).getStoredEu());
             }
         }
         return total;
@@ -401,6 +408,8 @@ public final class EuCableNet {
                 taken = taken.add(((SolarPanelTile) be).getEnergy().extractEu(share, false));
             } else if (be instanceof StorageBoxTile) {
                 taken = taken.add(((StorageBoxTile) be).extractEu(share, false));
+            } else if (be instanceof TransformerTile) {
+                taken = taken.add(((TransformerTile) be).extractEu(share, false));
             }
         }
         return taken;

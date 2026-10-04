@@ -1,6 +1,7 @@
 package com.example.solarpower.registry;
 
 import com.example.solarpower.SolarPower;
+import com.example.solarpower.energy.EuTier;
 import com.example.solarpower.solar.GlassCableTier;
 import com.example.solarpower.solar.MtRecipes;
 import com.example.solarpower.solar.SolarTier;
@@ -36,6 +37,33 @@ public final class ModRecipes {
         registerSspComponents();
         registerPanelChain();
         registerCableRecipes();
+        registerTransformerRecipes();
+    }
+
+    /**
+     * 变压器合成（65 档，桥接电压 T↔T+1）：上下铁锭 + 中列「电缆(T)/铁块/电缆(T)」。
+     * 电缆取绑定面板 iuTier == T 的首条玻璃电缆（低压/中压/高压……逐档可用）。
+     */
+    private static void registerTransformerRecipes() {
+        for (EuTier tier : EuTier.values()) {
+            if (tier.iuTier() > 65) {
+                continue;
+            }
+            GlassCableTier cable = cableForIuTier(tier.iuTier());
+            add(new ItemStack(ModBlocks.transformer(tier)), " I ", "CBC", " I ",
+                    'I', Items.IRON_INGOT, 'B', Blocks.IRON_BLOCK,
+                    'C', ModItems.cableItem(cable));
+        }
+    }
+
+    /** 绑定面板 iuTier == 给定电压档的首条玻璃电缆。 */
+    private static GlassCableTier cableForIuTier(int iuTier) {
+        for (GlassCableTier tier : GlassCableTier.values()) {
+            if (tier.partTier().iuTier() == iuTier) {
+                return tier;
+            }
+        }
+        throw new IllegalStateException("no glass cable for iuTier " + iuTier);
     }
 
     /**
