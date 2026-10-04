@@ -1,0 +1,656 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<title>素材像素编辑器 — 16×16 模板设计</title>
+<style>
+  :root {
+    --bg: #1a1d22; --panel: #22262d; --panel2: #2a2f38;
+    --text: #dfe6ee; --dim: #8b94a3; --accent: #4fd1c5;
+    --canvas: #171a1f;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    background: var(--bg); color: var(--text);
+    font-family: "Segoe UI", "Microsoft YaHei", sans-serif;
+    display: flex; gap: 18px; padding: 18px; min-height: 100vh;
+  }
+  /* ---------- 左侧:画布 ---------- */
+  #left { flex: 0 0 auto; display: flex; flex-direction: column; gap: 12px; align-items: center; }
+  #canvasWrap {
+    position: relative; background: var(--canvas);
+    border: 2px solid var(--panel2); border-radius: 6px;
+    display: flex; align-items: center; justify-content: center;
+    width: 544px; height: 544px;
+  }
+  canvas { image-rendering: pixelated; cursor: crosshair; }
+  #hoverInfo { color: var(--dim); font-size: 13px; min-height: 18px; }
+  .btnrow { display: flex; gap: 8px; flex-wrap: wrap; justify-content: center; }
+  button {
+    background: var(--panel2); color: var(--text); border: 1px solid #3a4150;
+    border-radius: 5px; padding: 7px 14px; cursor: pointer; font-size: 13px;
+  }
+  button:hover { border-color: var(--accent); color: var(--accent); }
+  button.primary { background: var(--accent); color: #10262a; border: none; font-weight: 600; }
+  button.primary:hover { filter: brightness(1.1); color: #10262a; }
+  /* ---------- 右侧:面板 ---------- */
+  #right { flex: 1; display: flex; flex-direction: column; gap: 14px; min-width: 340px; }
+  .card { background: var(--panel); border-radius: 8px; padding: 14px; }
+  .card h2 { font-size: 14px; color: var(--accent); margin-bottom: 10px; font-weight: 600; }
+  .roles { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; }
+  .role {
+    border: 2px solid transparent; border-radius: 6px; padding: 6px;
+    cursor: pointer; text-align: center; background: var(--panel2);
+  }
+  .role.active { border-color: var(--accent); }
+  .role .swatch { width: 100%; height: 34px; border-radius: 4px; margin-bottom: 4px;
+    background-image:
+      linear-gradient(45deg, #555 25%, transparent 25%, transparent 75%, #555 75%),
+      linear-gradient(45deg, #555 25%, transparent 25%, transparent 75%, #555 75%);
+    background-size: 12px 12px; background-position: 0 0, 6px 6px;
+    background-color: #333;
+  }
+  .role .swatch span { display: block; width: 100%; height: 100%; border-radius: 3px; }
+  .role .name { font-size: 12px; }
+  .role .key { font-size: 11px; color: var(--dim); }
+  .hint { font-size: 12px; color: var(--dim); line-height: 1.7; }
+  .hint b { color: var(--text); }
+  textarea {
+    width: 100%; height: 240px; background: var(--canvas); color: #9fd8b0;
+    border: 1px solid #3a4150; border-radius: 6px; padding: 10px;
+    font-family: Consolas, monospace; font-size: 13px; line-height: 1.25;
+    resize: vertical; white-space: pre;
+  }
+  #exportOut { height: 130px; color: #f0c674; }
+  .legend { display: flex; flex-wrap: wrap; gap: 6px; }
+  .legend .chip {
+    font-size: 11px; padding: 3px 8px; border-radius: 10px;
+    background: var(--panel2); color: var(--dim);
+  }
+</style>
+</head>
+<body>
+
+<div id="left">
+  <div id="canvasWrap"><canvas id="cv" width="512" height="512"></canvas></div>
+  <div id="hoverInfo">移动鼠标查看坐标</div>
+  <div class="btnrow" id="patBtns"></div>
+  <div class="btnrow">
+    <button class="primary" id="btnExport">生成布局（复制到剪贴板）</button>
+    <button id="btnImport">从文本导入</button>
+    <button id="btnReset">重置为当前布局</button>
+    <button id="btnClear">清空</button>
+    <button id="btnSymH">左右对称</button>
+    <button id="btnSymV">上下对称</button>
+    <button id="btnSymQ">四面对称</button>
+  </div>
+</div>
+
+<div id="right">
+  <div class="card">
+    <h2>画笔（点击角色选中，快捷键 1-0 按图案而定）</h2>
+    <div class="roles" id="roles"></div>
+  </div>
+
+  <div class="card">
+    <h2>操作说明</h2>
+    <div class="hint">
+      <b>左键</b> 画 / <b>右键</b> 擦除（透明）· <b>拖动</b> 连续绘制 ·
+      <b>Shift+点击</b> 直线填充 · 滚轮/+- 无需，16×16 固定。<br>
+      画的是 <b>模板</b>（角色字符），不是最终颜色——同一模板会按各档面板配色渲染，
+      固定色角色（W 白点 / N 灰点 / E 描边 / B 亮带 / G 机框 / R 储能红 / O 能量芯）不随档位变化。<br>
+      <b>储电盒 / 变压器 / 充电座</b>为 IU 红色素材的原图逐像素转写（用户 2026-10-04 定），
+      各自带独立调色板，画笔名称/颜色即原图配色，画布所见即原图。
+    </div>
+  </div>
+
+  <div class="card">
+    <h2>模板文本（可手动编辑，16 行 × 16 字符）</h2>
+    <textarea id="tmpl" spellcheck="false"></textarea>
+    <div class="btnrow" style="margin-top:8px">
+      <button id="btnApplyText">应用文本 → 画布</button>
+      <span class="chip legend" id="rowCount"></span>
+    </div>
+  </div>
+
+  <div class="card">
+    <h2>导出（完成后点「生成布局」，把剪贴板内容发给我）</h2>
+    <textarea id="exportOut" spellcheck="false" readonly></textarea>
+  </div>
+</div>
+
+<script>
+const CHARS = [
+  {ch:'.', name:'透明镂空', key:'1', color:null},
+  {ch:'E', name:'描边(深)', key:'2', color:'#5d6678'},
+  {ch:'M', name:'主体(面板色)', key:'3', color:'#ffd957'},
+  {ch:'B', name:'亮带(泛白)', key:'4', color:'#fff38f'},
+  {ch:'D', name:'深肋(压暗)', key:'5', color:'#bd930f'},
+  {ch:'W', name:'中心白点(固定)', key:'6', color:'#f7f7f7'},
+  {ch:'N', name:'角落灰点(固定)', key:'7', color:'#bfbbc4'},
+];
+function roleName(c) { return c.name; }
+const N = 16, CELL = 32;
+// 内置图案（切换按钮在画布上方；重置=回到当前图案的定稿）
+// 核心 = 2026-10-03 定稿（gen_cores.py 同步）；电缆 = 2026-10-02 定稿（gen_cables_iu.py 同步）
+// 储电盒/变压器/充电座 = 2026-10-04 红色变体（用户指定 IU 红色素材，要求与原图一致）：
+//   模板由 IU 原图（mfsu_front / hv_transformer_front / chargepad_mfsu_top）逐像素转写，
+//   palette 为该图案独立的角色表（名称+颜色取自原图采样，画布即原图配色）。
+//   机器方块落地后由对应 gen 脚本引用（当前仅存于此文件，防漂移）。
+// 储能仓家族共用调色板（颜色取自 mfsu_front 采样）。IU 里变压器侧面（hv_transformer_side）
+// 与充电桩非顶面（chargepad_mfsu_front/leftrightback/bottom）逐字节等于储能仓对应面，
+// 所以侧面/顶底图案同时覆盖变压器侧与充电桩侧/底。
+// 红石矿石 = 2026-10-04 用户定：原版 1.12.2 redstone_ore.png 逐像素转写（石头 k/s/t/u 4 档灰 +
+//   红石 a/b/c/d/R 5 档红，共 9 色占满快捷键 1-0），要求与原图完全一致；生成脚本待矿石方块落地后创建。
+// 铁锭 / 火药 = 2026-10-04 用户定：原版 1.12.2 iron_ingot.png（10 档灰 a-j）/ gunpowder.png
+//   （7 档灰 a-g）逐像素转写；铁锭 11 角色超出 10 键，第 11 个角色不设热键、点击选用。
+const PAL_STORAGE = [
+  {ch:'.', name:'透明镂空'},
+  {ch:'E', name:'暗线', color:'#3d3d3d'},
+  {ch:'G', name:'框亮', color:'#d8dede'},
+  {ch:'D', name:'框灰', color:'#9cacad'},
+  {ch:'N', name:'框灰点', color:'#b9c3c3'},
+  {ch:'M', name:'红深', color:'#a1212c'},
+  {ch:'R', name:'储能红', color:'#c73232'},
+  {ch:'B', name:'红亮', color:'#e45151'},
+  {ch:'O', name:'能量芯', color:'#c48301'},
+  {ch:'W', name:'芯高光', color:'#e7b707'},
+];
+const PATTERNS = {
+  "核心": {
+    rows: [
+"........B.......",
+"..B..B.BN.B..B..",
+".BBBENEEEENE.BB.",
+"...NEEEDEDEENB..",
+"..EEDMMMEMEDEE..",
+".BNEEEEMEMEMENB.",
+"..EDMMMNNMEMEE..",
+"BNEEEEN..NMMDEB.",
+".BEDMMN..NEEEENB",
+"..EEMEMNNMMMDE..",
+".BNEMEMEMEEEENB.",
+"..EEDEMEMMMDEE..",
+"..BNEEDEDEEEN...",
+".BB.ENEEEENEBBB.",
+"..B..B.NB.B..B..",
+".......B........",
+    ],
+  },
+  "电缆": {
+    rows: [
+".....DMB.MD.....",
+"..N..DM.BMD...N.",
+".N...DMB.MD..N..",
+".....DM..MD.....",
+".....DM.BMD.....",
+"DDDDDDMB.MDDDDDD",
+"MMMMMMBBBBMMMMMM",
+".B..B.B..B.B..B.",
+"B..B.BB..BB..B.B",
+"MMMMMMBBBBMMMMMM",
+"DDDDDDMB.MDDDDDD",
+".....DM.BMD.....",
+".....DMB.MD.....",
+".N...DM..MD..N..",
+"..N..DM.BMD...N.",
+".....DMB.MD....."
+    ],
+  },
+  "红石矿石": {
+    // 原版 redstone_ore.png（1.12.2）逐像素转写：石头 4 档灰（k/s/t/u）+ 红石 5 档红（a/b/c/d/R）。
+    // 9 色 + 透明 = 10 角色，正好占满快捷键 1-0；红石 5 档互为同一色阶，
+    // 生成脚本可整体换成别的矿色（石头底保持不动）。
+    // 2026-10-04 用户定：要求精确复刻原版红石矿石；生成脚本待矿石方块落地后创建。
+    palette: [
+      {ch:'.', name:'透明镂空'},
+      {ch:'k', name:'石底最暗', color:'#686868'},
+      {ch:'s', name:'石底暗',   color:'#747474'},
+      {ch:'t', name:'石底中',   color:'#7f7f7f'},
+      {ch:'u', name:'石底亮',   color:'#8f8f8f'},
+      {ch:'a', name:'矿点最暗', color:'#8f0303'},
+      {ch:'b', name:'矿点暗',   color:'#970303'},
+      {ch:'c', name:'矿点中',   color:'#aa0404'},
+      {ch:'d', name:'矿点亮暗', color:'#b80505'},
+      {ch:'R', name:'矿点高光', color:'#ff0000'},
+    ],
+    legend: '// 角色: k=石底最暗 s=石底暗 t=石底中 u=石底亮 a=矿点最暗 b=矿点暗 c=矿点中 d=矿点亮暗 R=矿点高光 .=透明 (原版 1.12.2 redstone_ore.png 逐像素转写, 往返校验一致)',
+    rows: [
+"tsssstuukutsssst",
+"ttuuuuuusuuuktts",
+"tkssbsssusttRbtt",
+"tutttktRatssssst",
+"tuusssssssuuuuuk",
+"sstttRcstkRcsskt",
+"uutdcbbattbauuuk",
+"tttssssssksssstt",
+"tRbkusttRcuuuuuu",
+"tsssssscaaasssut",
+"ttusbuusksuuuttt",
+"ktttstttuutRauuk",
+"tssssssscRcbbast",
+"tusRattssaasttuu",
+"tttsssssttuutsst",
+"sssskuuttttssstt",
+    ],
+  },
+  "铁锭": {
+    // 原版 iron_ingot.png（1.12.2）逐像素转写：10 档灰度（a-j 由暗到亮）+ 透明 = 11 角色。
+    // 2026-10-04 用户定：以原版铁锭为基准；生成脚本待对应物品落地后创建。
+    palette: [
+      {ch:'.', name:'透明镂空'},
+      {ch:'a', name:'铁阶1最暗', color:'#353535'},
+      {ch:'b', name:'铁阶2',     color:'#444444'},
+      {ch:'c', name:'铁阶3',     color:'#686868'},
+      {ch:'d', name:'铁阶4',     color:'#727272'},
+      {ch:'e', name:'铁阶5',     color:'#7f7f7f'},
+      {ch:'f', name:'铁阶6',     color:'#828282'},
+      {ch:'g', name:'铁阶7',     color:'#969696'},
+      {ch:'h', name:'铁阶8',     color:'#a8a8a8'},
+      {ch:'i', name:'铁阶9',     color:'#d8d8d8'},
+      {ch:'j', name:'铁阶10最亮', color:'#ffffff'},
+    ],
+    legend: '// 角色: a-j = 铁锭灰度阶 1..10（由暗到亮，原版 1.12.2 iron_ingot.png 逐像素转写, 往返校验一致） .=透明',
+    rows: [
+"................",
+"................",
+"..........bb....",
+".......bbbhhb...",
+"....bbbhjiiihb..",
+".bbbhjjiiiiiihb.",
+"bgjjjiiiiiicccca",
+"bjgiiiiicccgggga",
+"bjigicccgggggdda",
+"biihegggggddddda",
+"bffhegggdddcaaa.",
+".bffeddddaaa....",
+"..bfedaaa.......",
+"...baa..........",
+"................",
+"................",
+    ],
+  },
+  "火药": {
+    // 原版 gunpowder.png（1.12.2）逐像素转写：7 档灰度（a-g 由暗到亮）+ 透明 = 8 角色。
+    // 2026-10-04 用户定：以原版火药为基准；生成脚本待对应物品落地后创建。
+    palette: [
+      {ch:'.', name:'透明镂空'},
+      {ch:'a', name:'火药阶1最暗', color:'#2d2d2d'},
+      {ch:'b', name:'火药阶2',     color:'#363636'},
+      {ch:'c', name:'火药阶3',     color:'#494949'},
+      {ch:'d', name:'火药阶4',     color:'#545454'},
+      {ch:'e', name:'火药阶5',     color:'#585858'},
+      {ch:'f', name:'火药阶6',     color:'#727272'},
+      {ch:'g', name:'火药阶7最亮', color:'#8a8a8a'},
+    ],
+    legend: '// 角色: a-g = 火药灰度阶 1..7（由暗到亮，原版 1.12.2 gunpowder.png 逐像素转写, 往返校验一致） .=透明',
+    rows: [
+"................",
+"................",
+"................",
+".......aa.......",
+"......affa......",
+".....agfdca.....",
+"....affffcca....",
+"...afffffcbca...",
+"..afffdfgcccca..",
+"..afdffffccbca..",
+"..acfgfffcccca..",
+"...accffbccea...",
+"....aaccccaa....",
+"......aaaa......",
+"................",
+"................",
+    ],
+  },
+  "储电盒": {
+    // IU mfsu_front 原图转写：红条十字 + 中央 E 环能量芯（O）+ 芯高光（W）
+    palette: PAL_STORAGE,
+    rows: [
+"DDDDDDBBBBDDDDDD",
+"DMMRRRMGGMRRRMMD",
+"DGGGGMNGGNMGGGGD",
+"DMRBRMNGGNMRBRMD",
+"DGGGGGNGGNGGGGGD",
+"DNDDNGEEEEGNDDND",
+"RRGGREEOOEERGGRR",
+"MMRBMEOWWOEMBRMM",
+"MMRBMEOWWOEMBRMM",
+"RRGGREEOOEERGGRR",
+"DNDDNGEEEEGNDDND",
+"DGGGGGNGGNGGGGGD",
+"DMRBRMNGGNMRBRMD",
+"DGGGGMNGGNMGGGGD",
+"DMMRRRMGGMRRRMMD",
+"DDDDDDBBBBDDDDDD",
+    ],
+  },
+  "储电盒侧面": {
+    // IU mfsu_leftrightback 原图转写（充电桩左右后 = 同一贴图）：红 E 形环带
+    palette: PAL_STORAGE,
+    rows: [
+"DDDDDDBBBBDDDDDD",
+"DMMRRRMGGMRRRMMD",
+"DGGGGMNGGNMGGGGD",
+"DMRBRMNRRNMRBRMD",
+"DGGGGGRGGRGGGGGD",
+"DNDDNGNGGNGNDDND",
+"RRGGNMMNNMMNGGRR",
+"MMRBRMDBBDMRBRMM",
+"MMRBRMDBBDMRBRMM",
+"RRGGNMMNNMMNGGRR",
+"DNDDNGNGGNGNDDND",
+"DGGGGGRGGRGGGGGD",
+"DMRBRMNRRNMRBRMD",
+"DGGGGMNGGNMGGGGD",
+"DMMRRRMGGMRRRMMD",
+"DDDDDDBBBBDDDDDD",
+    ],
+  },
+  "储电盒顶底": {
+    // IU mfsu_bottomtop 原图转写（充电桩底面 = 同一贴图）：红四方环 + 端子
+    palette: PAL_STORAGE,
+    rows: [
+"DDDDDDBDDBDDDDDD",
+"DNGGNGRMMRGNGGND",
+"DNGGNGNRRNGNGGND",
+"DNNNDGNBBNGDNNND",
+"DGGGNGNRRNGNGGGD",
+"DNDDNGRRRRGNDDND",
+"BRGGNMMNNMMNGGRB",
+"DMRBRMDBBDMRBRMD",
+"DMRBRMDBBDMRBRMD",
+"BRGGNMMNNMMNGGRB",
+"DNDDNGRRRRGNDDND",
+"DGGGNGNRRNGNGGGD",
+"DNNNDGNBBNGDNNND",
+"DNGGNGNRRNGNGGND",
+"DNGGNGRMMRGNGGND",
+"DDDDDDBDDBDDDDDD",
+    ],
+  },
+  "变压器": {
+    // IU hv_transformer_front 原图转写：红叉臂（R/M/B）串联四角 + 中心灯珠（O/W/N）
+    palette: [
+      {ch:'.', name:'透明镂空'},
+      {ch:'E', name:'暗框', color:'#3d3d3d'},
+      {ch:'G', name:'框亮', color:'#d8dede'},
+      {ch:'D', name:'框灰', color:'#9cacad'},
+      {ch:'M', name:'红深', color:'#a1212c'},
+      {ch:'R', name:'储能红', color:'#c73232'},
+      {ch:'B', name:'红亮', color:'#e45151'},
+      {ch:'O', name:'灯珠', color:'#c9bd55'},
+      {ch:'W', name:'灯珠亮', color:'#f2f170'},
+      {ch:'N', name:'灯珠高光', color:'#f5ffd1'},
+    ],
+    rows: [
+"DDDDDDBDDBDDDDDD",
+"DDGEEGRMMRGEEGDD",
+"DGEOOEGRRGEOOEGD",
+"DEONWOEBBEONWOED",
+"DEOWWOEBBEOWWOED",
+"DGEOOEMEEMEOOEGD",
+"BRGEEMEOOEMEEGRB",
+"DMRBBEONWOEBBRMD",
+"DMRBBEOWWOEBBRMD",
+"BRGEEMEOOEMEEGRB",
+"DGEOOEMEEMEOOEGD",
+"DEONWOEBBEONWOED",
+"DEOWWOEBBEOWWOED",
+"DGEOOEGRRGEOOEGD",
+"DDGEEGRMMRGEEGDD",
+"DDDDDDBDDBDDDDDD",
+    ],
+  },
+  "充电座": {
+    // IU chargepad_mfsu_top 原图转写：同心垫面（E/O/D/W/G/N 灰阶）+ 两侧红端子（R/B）
+    palette: [
+      {ch:'.', name:'透明镂空'},
+      {ch:'E', name:'垫暗', color:'#6e6e6e'},
+      {ch:'O', name:'垫深灰', color:'#969696'},
+      {ch:'D', name:'垫蓝灰', color:'#9cacad'},
+      {ch:'W', name:'垫中灰', color:'#a8a8a8'},
+      {ch:'N', name:'垫青灰', color:'#b9c3c3'},
+      {ch:'G', name:'垫亮', color:'#d4d4d4'},
+      {ch:'R', name:'储能红', color:'#c73232'},
+      {ch:'B', name:'红亮', color:'#e45151'},
+    ],
+    rows: [
+"DDDDDOBOOBODDDDD",
+"DNGGNGRRRRGNGGND",
+"DNOOOOOOOOOOEEND",
+"DNOGGWWWWWWGGEND",
+"DGOGOOOOOEEEGEGD",
+"ONOWOGGWWGGEWENO",
+"BROWOGEEEEGEWERB",
+"OROWEWEGWEWEWERO",
+"OROWEWEWGOWEWERO",
+"BROWEGEEOOGEWERB",
+"ONOWEGGWWGGEWENO",
+"DGEGEEEEEEEEGEGD",
+"DNEGGWWWWWWGGEND",
+"DNEEEEEEEEEEEEND",
+"DNGGNGRRRRGNGGND",
+"DDDDDOBOOBODDDDD",
+    ],
+  },
+};
+let currentPatternName = '核心';
+function patternRows() { return PATTERNS[currentPatternName].rows; }
+// 当前图案的角色表：机器图案用自带 palette（名称+颜色取自 IU 原图），
+// 核心/电缆用全局 CHARS；快捷键一律按位置 1-9/0。
+function effRoles() {
+  const pal = PATTERNS[currentPatternName].palette;
+  const list = pal || CHARS;
+  // 前 10 个角色映射快捷键 1-9/0；超出的（如铁锭 11 色）不设热键，仍可点击选用
+  return list.map((c, i) => ({ ...c, key: i < 10 ? String((i + 1) % 10) : '—' }));
+}
+function roleColor(c) { return c.color; }
+
+
+
+let grid = patternRows().map(r => r.padEnd(N, '.').slice(0, N).split(''));
+let brush = 'M';
+let lastCell = null;      // 拖动连线起点
+let shiftAnchor = null;   // shift 直线
+const cv = document.getElementById('cv');
+const ctx = cv.getContext('2d');
+const info = document.getElementById('hoverInfo');
+const tmplBox = document.getElementById('tmpl');
+
+function charColor(ch) {
+  const def = effRoles().find(c => c.ch === ch);
+  return def && roleColor(def) ? roleColor(def) : 'transparent';
+}
+function draw() {
+  ctx.clearRect(0, 0, cv.width, cv.height);
+  for (let y = 0; y < N; y++) for (let x = 0; x < N; x++) {
+    const ch = grid[y][x];
+    const px = x * CELL, py = y * CELL;
+    const col = charColor(ch);
+    if (col !== 'transparent') {
+      ctx.fillStyle = col;
+      ctx.fillRect(px, py, CELL, CELL);
+    } else {
+      // 透明棋盘格
+      ctx.fillStyle = ((x + y) % 2) ? '#14171f' : '#0c0e14';
+      ctx.fillRect(px, py, CELL, CELL);
+    }
+  }
+  // 网格线
+  ctx.strokeStyle = 'rgba(255,255,255,0.06)';
+  ctx.lineWidth = 1;
+  for (let i = 0; i <= N; i++) {
+    ctx.beginPath(); ctx.moveTo(i*CELL+.5, 0); ctx.lineTo(i*CELL+.5, N*CELL); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(0, i*CELL+.5); ctx.lineTo(N*CELL, i*CELL+.5); ctx.stroke();
+  }
+  // 中心参考线(4px 十字提示电缆臂位置)
+  ctx.strokeStyle = 'rgba(79,209,197,0.25)';
+  ctx.strokeRect(4*CELL+.5, 4*CELL+.5, 8*CELL-1, 8*CELL-1);
+  tmplBox.value = grid.map(r => r.join('')).join('\n');
+  document.getElementById('rowCount').textContent = grid.length + ' 行 × ' + grid[0].length + ' 列';
+}
+function renderRoles() {
+  const box = document.getElementById('roles');
+  box.innerHTML = '';
+  effRoles().forEach(c => {
+    const el = document.createElement('div');
+    el.className = 'role' + (c.ch === brush ? ' active' : '');
+    el.innerHTML = `<div class="swatch"><span style="background:${roleColor(c) || 'transparent'};border:1px dashed #666"></span></div>
+                    <div class="name">${roleName(c)}</div><div class="key">${c.ch} · ${c.key}</div>`;
+    el.onclick = () => { brush = c.ch; renderRoles(); };
+    box.appendChild(el);
+  });
+}
+function paint(x, y, ch) {
+  if (x < 0 || y < 0 || x >= N || y >= N) return;
+  grid[y][x] = ch;
+}
+function line(x0, y0, x1, y1, ch) {
+  // Bresenham
+  let dx = Math.abs(x1-x0), dy = -Math.abs(y1-y0);
+  let sx = x0 < x1 ? 1 : -1, sy = y0 < y1 ? 1 : -1, err = dx + dy;
+  while (true) {
+    paint(x0, y0, ch);
+    if (x0 === x1 && y0 === y1) break;
+    const e2 = 2 * err;
+    if (e2 >= dy) { err += dy; x0 += sx; }
+    if (e2 <= dx) { err += dx; y0 += sy; }
+  }
+}
+function cellFromEvent(e) {
+  const r = cv.getBoundingClientRect();
+  const x = Math.floor((e.clientX - r.left) / CELL);
+  const y = Math.floor((e.clientY - r.top) / CELL);
+  return (x >= 0 && y >= 0 && x < N && y < N) ? [x, y] : null;
+}
+cv.addEventListener('contextmenu', e => e.preventDefault());
+cv.addEventListener('mousedown', e => {
+  const c = cellFromEvent(e); if (!c) return;
+  const ch = e.button === 2 ? '.' : brush;
+  if (e.shiftKey && shiftAnchor) {
+    line(shiftAnchor[0], shiftAnchor[1], c[0], c[1], ch);
+    shiftAnchor = null;
+  } else {
+    paint(c[0], c[1], ch);
+    shiftAnchor = e.shiftKey ? c : null;
+    lastCell = c;
+    cv.dataset.painting = '1';
+    cv.dataset.ch = ch;
+  }
+  draw();
+});
+cv.addEventListener('mousemove', e => {
+  const c = cellFromEvent(e);
+  info.textContent = c ? `x=${c[0]} y=${c[1]} 当前:${grid[c[1]][c[0]]}` : '';
+  if (cv.dataset.painting === '1' && c && lastCell) {
+    line(lastCell[0], lastCell[1], c[0], c[1], cv.dataset.ch);
+    lastCell = c;
+    draw();
+  }
+});
+window.addEventListener('mouseup', () => { cv.dataset.painting = '0'; lastCell = null; });
+window.addEventListener('keydown', e => {
+  const def = effRoles().find(c => c.key === e.key);
+  if (def && document.activeElement !== tmplBox) { brush = def.ch; renderRoles(); e.preventDefault(); }
+});
+// 对称工具
+function mirrorH() {
+  grid = grid.map(row => row.map((c, i) => row[N-1-i]));
+  draw();
+}
+function mirrorV() {
+  grid = grid.map((row, i) => grid[N-1-i]);
+  draw();
+}
+document.getElementById('btnSymH').onclick = mirrorH;
+document.getElementById('btnSymV').onclick = mirrorV;
+document.getElementById('btnSymQ').onclick = () => {
+  grid = grid.map((row, y) => row.map((c, x) => grid[Math.min(y, N-1-y)][Math.min(x, N-1-x)]));
+  draw();
+};
+document.getElementById('btnClear').onclick = () => {
+  grid = Array.from({length: N}, () => Array(N).fill('.'));
+  draw();
+};
+document.getElementById('btnReset').onclick = () => {
+  grid = patternRows().map(r => r.split(''));
+  draw();
+};
+document.getElementById('btnApplyText').onclick = () => {
+  const lines = tmplBox.value.replace(/\r/g, '').split('\n').filter(l => l.length > 0);
+  if (lines.length !== N) { alert('需要 16 行,当前 ' + lines.length + ' 行'); return; }
+  grid = lines.map(l => l.padEnd(N, '.').slice(0, N).split(''));
+  draw();
+};
+// 导出目标:核心/电缆与生成脚本同步;储电盒/变压器/充电座为红色变体模板(2026-10-04),
+// 对应机器贴图生成脚本待机器方块落地后创建
+const EXPORTS = {
+  "核心":  {varName: 'TEMPLATE',             note: '替换 texturegen/gen_cores.py 中 TEMPLATE = [ ... ](注释后 16 行)'},
+  "电缆":  {varName: 'TEMPLATE',             note: '替换 texturegen/gen_cables_iu.py 中 TEMPLATE = [ ... ](注释后 16 行)'},
+  "红石矿石":  {varName: 'TEMPLATE_ORE',     note: '原版红石矿石模板(1.12.2 redstone_ore.png 逐像素转写, 石头 k/s/t/u + 红石 a/b/c/d/R):生成脚本待矿石方块落地后创建, 先把本段发给 AI 存档'},
+  "铁锭":    {varName: 'TEMPLATE_INGOT',   note: '原版铁锭模板(1.12.2 iron_ingot.png 逐像素转写, 灰度阶 a-j 共 10 档):生成脚本待对应物品落地后创建, 先把本段发给 AI 存档'},
+  "火药":    {varName: 'TEMPLATE_DUST',    note: '原版火药模板(1.12.2 gunpowder.png 逐像素转写, 灰度阶 a-g 共 7 档):生成脚本待对应物品落地后创建, 先把本段发给 AI 存档'},
+  "储电盒":  {varName: 'TEMPLATE_STORAGE_BOX',      note: '红色变体模板(储电盒正面, 变压器侧面/充电桩正面同图):生成脚本待机器方块落地后创建, 先把本段发给 AI 存档'},
+  "储电盒侧面": {varName: 'TEMPLATE_STORAGE_SIDE',      note: '红色变体模板(储电盒左右后侧面, 充电桩左右后同图):生成脚本待机器方块落地后创建, 先把本段发给 AI 存档'},
+  "储电盒顶底": {varName: 'TEMPLATE_STORAGE_TOPBOTTOM', note: '红色变体模板(储电盒顶底面, 充电桩底面同图):生成脚本待机器方块落地后创建, 先把本段发给 AI 存档'},
+  "变压器": {varName: 'TEMPLATE_TRANSFORMER', note: '红色变体模板(变压器正面):生成脚本待机器方块落地后创建, 先把本段发给 AI 存档'},
+  "充电座": {varName: 'TEMPLATE_CHARGEPAD',   note: '红色变体模板(充电座顶面):生成脚本待机器方块落地后创建, 先把本段发给 AI 存档'},
+};
+document.getElementById('btnExport').onclick = () => {
+  const rows = grid.map(r => r.join(''));
+  const ex = EXPORTS[currentPatternName];
+  const machine = !!PATTERNS[currentPatternName].palette;
+  const NL = String.fromCharCode(10);
+  const legend = PATTERNS[currentPatternName].legend
+    ? PATTERNS[currentPatternName].legend
+    : (machine
+      ? '// 角色: ' + effRoles().map(c => c.ch + '=' + c.name).join(' ') + ' (红变体: 全固定色, 取自 IU 原图)'
+      : '// 角色: E=描边 M=主体 B=亮带 D=深肋 W=中心白点 N=灰点 .=透明');
+  const out =
+    '// ===== ' + currentPatternName + '主模板(用户设计) =====' + NL
+    + '// ' + ex.note + NL
+    + ex.varName + ' = [' + NL
+    + rows.map(r => '"' + r + '",').join(NL) + NL
+    + ']' + NL
+    + legend;
+  const outBox = document.getElementById('exportOut');
+  outBox.value = out;
+  navigator.clipboard.writeText(out).then(
+    () => { info.textContent = '✓ 已复制到剪贴板,发给 AI 即可'; },
+    () => { info.textContent = '剪贴板不可用,请手动复制下方文本'; });
+};
+
+document.getElementById('btnImport').onclick = () => {
+  document.getElementById('btnApplyText').click();
+};
+
+// 图案切换:载入对应定稿到画布(未保存的编辑会被覆盖)
+function renderPatternButtons() {
+  const box = document.getElementById('patBtns');
+  box.innerHTML = '';
+  Object.keys(PATTERNS).forEach(name => {
+    const b = document.createElement('button');
+    b.textContent = '图案：' + name;
+    b.className = name === currentPatternName ? 'primary' : '';
+    b.onclick = () => loadPattern(name);
+    box.appendChild(b);
+  });
+}
+function loadPattern(name) {
+  currentPatternName = name;
+  grid = patternRows().map(r => r.padEnd(N, '.').slice(0, N).split(''));
+  if (!effRoles().some(c => c.ch === brush)) {
+    brush = effRoles().find(c => c.ch !== '.').ch;
+  }
+  renderPatternButtons();
+  renderRoles();
+  draw();
+}
+
+renderRoles();
+renderPatternButtons();
+draw();
+</script>
+</body>
+</html>

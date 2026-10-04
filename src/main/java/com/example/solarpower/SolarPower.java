@@ -11,6 +11,7 @@ import com.example.solarpower.solar.SolarTier;
 import com.example.solarpower.tileentity.GlassCableTile;
 import com.example.solarpower.tileentity.MolecularTransformerTile;
 import com.example.solarpower.tileentity.SolarPanelTile;
+import com.example.solarpower.tileentity.StorageBoxTile;
 
 import net.minecraft.creativetab.CreativeTabs;
 import net.minecraft.item.Item;
@@ -48,12 +49,15 @@ public final class SolarPower {
             return new ItemStack(ModItems.panelItem(SolarTier.BASIC));
         }
 
-        /** 固定排列：面板(1→67) → 电缆(1→31) → 合成材料+分子重组仪；不随注册顺序漂移。 */
+        /** 固定排列：面板(1→67) → 储电盒(1→67) → 电缆(1→31) → 合成材料+分子重组仪；不随注册顺序漂移。 */
         @Nonnull
         @Override
         public void displayAllRelevantItems(@Nonnull NonNullList<ItemStack> items) {
             for (SolarTier tier : SolarTier.values()) {
                 items.add(new ItemStack(ModItems.panelItem(tier)));
+            }
+            for (SolarTier tier : SolarTier.values()) {
+                items.add(new ItemStack(ModItems.storageBoxItem(tier)));
             }
             for (GlassCableTier tier : GlassCableTier.values()) {
                 items.add(new ItemStack(ModItems.cableItem(tier)));
@@ -73,6 +77,8 @@ public final class SolarPower {
                 new ResourceLocation(MODID, "glass_cable"));
         GameRegistry.registerTileEntity(MolecularTransformerTile.class,
                 new ResourceLocation(MODID, "molecular_transformer"));
+        GameRegistry.registerTileEntity(StorageBoxTile.class,
+                new ResourceLocation(MODID, "storage_box"));
     }
 
     @EventHandler

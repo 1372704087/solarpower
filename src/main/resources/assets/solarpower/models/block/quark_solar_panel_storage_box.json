@@ -1,0 +1,12 @@
+{
+  "parent": "block/cube",
+  "textures": {
+    "north": "solarpower:block/quark_solar_panel_storage_box_front",
+    "south": "solarpower:block/quark_solar_panel_storage_box_side",
+    "east": "solarpower:block/quark_solar_panel_storage_box_side",
+    "west": "solarpower:block/quark_solar_panel_storage_box_side",
+    "up": "solarpower:block/quark_solar_panel_storage_box_topbottom",
+    "down": "solarpower:block/quark_solar_panel_storage_box_topbottom",
+    "particle": "solarpower:block/quark_solar_panel_storage_box_side"
+  }
+}

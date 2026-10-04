@@ -2,8 +2,10 @@ package com.example.solarpower.client;
 
 import com.example.solarpower.inventory.MolecularTransformerContainer;
 import com.example.solarpower.inventory.SolarPanelContainer;
+import com.example.solarpower.inventory.StorageBoxContainer;
 import com.example.solarpower.tileentity.MolecularTransformerTile;
 import com.example.solarpower.tileentity.SolarPanelTile;
+import com.example.solarpower.tileentity.StorageBoxTile;
 
 import net.minecraft.entity.player.EntityPlayer;
 import net.minecraft.util.math.BlockPos;
@@ -17,6 +19,7 @@ public class GuiHandler implements IGuiHandler {
 
     public static final int GUI_SOLAR_PANEL = 0;
     public static final int GUI_MOLECULAR_TRANSFORMER = 1;
+    public static final int GUI_STORAGE_BOX = 2;
 
     @Nullable
     @Override
@@ -30,6 +33,11 @@ public class GuiHandler implements IGuiHandler {
                 && world.getTileEntity(pos) instanceof MolecularTransformerTile) {
             return new MolecularTransformerContainer(player.inventory,
                     (MolecularTransformerTile) world.getTileEntity(pos));
+        }
+        if (id == GUI_STORAGE_BOX
+                && world.getTileEntity(pos) instanceof StorageBoxTile) {
+            return new StorageBoxContainer(player.inventory,
+                    (StorageBoxTile) world.getTileEntity(pos));
         }
         return null;
     }
@@ -46,6 +54,11 @@ public class GuiHandler implements IGuiHandler {
                 && world.getTileEntity(pos) instanceof MolecularTransformerTile) {
             return new GuiMolecularTransformer(new MolecularTransformerContainer(player.inventory,
                     (MolecularTransformerTile) world.getTileEntity(pos)));
+        }
+        if (id == GUI_STORAGE_BOX
+                && world.getTileEntity(pos) instanceof StorageBoxTile) {
+            return new GuiStorageBox(new StorageBoxContainer(player.inventory,
+                    (StorageBoxTile) world.getTileEntity(pos)));
         }
         return null;
     }

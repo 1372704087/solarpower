@@ -1,0 +1,12 @@
+{
+  "parent": "block/cube",
+  "textures": {
+    "north": "solarpower:block/divine_light_solar_panel_storage_box_front",
+    "south": "solarpower:block/divine_light_solar_panel_storage_box_side",
+    "east": "solarpower:block/divine_light_solar_panel_storage_box_side",
+    "west": "solarpower:block/divine_light_solar_panel_storage_box_side",
+    "up": "solarpower:block/divine_light_solar_panel_storage_box_topbottom",
+    "down": "solarpower:block/divine_light_solar_panel_storage_box_topbottom",
+    "particle": "solarpower:block/divine_light_solar_panel_storage_box_side"
+  }
+}

@@ -1,0 +1,22 @@
+{
+  "variants": {
+    "facing=north": {
+      "model": "solarpower:block/solar_panel_storage_box"
+    },
+    "facing=east": {
+      "model": "solarpower:block/solar_panel_storage_box",
+      "y": 90
+    },
+    "facing=south": {
+      "model": "solarpower:block/solar_panel_storage_box",
+      "y": 180
+    },
+    "facing=west": {
+      "model": "solarpower:block/solar_panel_storage_box",
+      "y": 270
+    },
+    "normal": {
+      "model": "solarpower:block/solar_panel_storage_box"
+    }
+  }
+}

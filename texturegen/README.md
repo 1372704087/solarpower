@@ -19,6 +19,7 @@
 |---|---|---|
 | 太阳能板顶面 / 侧面 | 67 档 × 2 = 134 张 | `gen_tops.py` / `gen_sides.py` |
 | 玻璃电缆方块 + 物品贴图 | 68 档 × 2 = 136 张 | `gen_cables_iu.py` |
+| 「XX储电盒」方块贴图 + 资产 | 67 档 × 3 = 201 张 + blockstates/模型/lang | `gen_storages.py` |
 | 「XX玻璃板」物品贴图 | 67 张 | `gen_panes.py` |
 | 「XX核心」物品贴图 | 66 张（2 档起） | `gen_cores.py` |
 | 阳光化合物 / 小块 / 合金 | 3 × 66 张 | `gen_sunnarium.py` |
@@ -62,6 +63,8 @@ py gen_cables_iu.py
 | `gen_cores.py` | 「XX核心」生成：编辑器定稿的核心主模板逐档着色（M=主题色 D=×0.55，E/B/W/N 固定）+ 模型 JSON |
 | `gen_sunnarium.py` | 阳光化合物/小块/合金：以 ASP 原图为底逐档改色，算法逐族指定（化合物/小块 = v1 色相平移，合金 = v2 亮度斜坡） |
 | `gen_cables_iu.py` | 当前电缆生成器：68 档方块 + 物品贴图，结构按 IU glass_cable 像素结构（十字线芯 + 暗边框），配色为 IU 观感的自定 deep/mid/bright（脚本内 `MAP` 表），写入双根目录，无 --write 开关 |
+| `gen_storages.py` | 「XX储电盒」生成器（2026-10-04）：67 档正面/侧面/顶底贴图（编辑器 IU 红转写模板逐档换色：红三阶 M/R/B = 面板 accent 的 deep/mid/bright，石灰与能量芯固定）+ blockstates（facing 四向）+ 方块/物品模型 + 双语 lang 追加；模板正本在本文件 TEMPLATE，编辑器图案与它同步 |
+| `gen_gui_storage.py` | 储电盒 GUI 底图（2026-10-04，自定义样式）：176×166 宽能量条 + 三行数据 + 玩家背包，槽位坐标与 StorageBoxContainer 的 8+18n 栅格一致；--write 写 textures/gui/storage_box.png |
 | `cable_pixel_editor.html` | 素材像素编辑器（16×16 模板设计，浏览器直接打开）。图案：核心/电缆（与 `gen_cores.py` / `gen_cables_iu.py` 的 TEMPLATE 同步）+ 储电盒/储电盒侧面/储电盒顶底/变压器/充电座（2026-10-04 用户定：IU 红色素材原图逐像素转写——mfsu_front / mfsu_leftrightback / mfsu_bottomtop / hv_transformer_front / chargepad_mfsu_top，各自带独立调色板，画布即原图配色。IU 里变压器侧面（hv_transformer_side）与充电桩非顶面与储能仓对应面完全相同，无需另画；导出变量 TEMPLATE_STORAGE_BOX / STORAGE_SIDE / STORAGE_TOPBOTTOM / TEMPLATE_TRANSFORMER / TEMPLATE_CHARGEPAD，生成脚本待对应机器方块落地后创建）+ 红石矿石（2026-10-04 用户定：原版 1.12.2 `redstone_ore.png` 逐像素转写，石头 k/s/t/u 4 档灰 + 红石 a/b/c/d/R 5 档红，导出变量 TEMPLATE_ORE，生成脚本待矿石方块落地后创建）+ 铁锭（原版 `iron_ingot.png` 逐像素转写，灰度阶 a-j 共 10 档，导出变量 TEMPLATE_INGOT）+ 火药（原版 `gunpowder.png` 逐像素转写，灰度阶 a-g 共 7 档，导出变量 TEMPLATE_DUST），后两者生成脚本待对应物品落地后创建。铁锭 11 角色超出快捷键 10 位，第 11 个角色不设热键、点击选用） |
 | `migrate_cable_tiers.py` | 电缆档位资产迁移器：按 GlassCableTier 生成/改名全套 blockstates + 模型 JSON（每档 18 件） |
 | `migrate_solar_tier.py` | SolarTier.java 紧凑格式（10 参常量）迁移器：spec 表 + 整文件重生成 |

@@ -4,6 +4,7 @@ import com.example.solarpower.SolarPower;
 import com.example.solarpower.block.GlassCableBlock;
 import com.example.solarpower.block.MolecularTransformerBlock;
 import com.example.solarpower.block.SolarPanelBlock;
+import com.example.solarpower.block.StorageBoxBlock;
 import com.example.solarpower.solar.GlassCableTier;
 import com.example.solarpower.solar.SolarTier;
 
@@ -21,6 +22,7 @@ public final class ModBlocks {
 
     private static final Map<SolarTier, SolarPanelBlock> PANELS = new EnumMap<>(SolarTier.class);
     private static final Map<GlassCableTier, GlassCableBlock> CABLES = new EnumMap<>(GlassCableTier.class);
+    private static final Map<SolarTier, StorageBoxBlock> STORAGE_BOXES = new EnumMap<>(SolarTier.class);
     private static MolecularTransformerBlock molecularTransformer;
 
     @SubscribeEvent
@@ -41,6 +43,13 @@ public final class ModBlocks {
             event.getRegistry().register(block);
             CABLES.put(tier, block);
         }
+        for (SolarTier tier : SolarTier.values()) {
+            StorageBoxBlock block = new StorageBoxBlock(tier);
+            block.setRegistryName(SolarPower.MODID, tier.id() + "_storage_box");
+            block.setUnlocalizedName(SolarPower.MODID + "." + tier.id() + "_storage_box");
+            event.getRegistry().register(block);
+            STORAGE_BOXES.put(tier, block);
+        }
         molecularTransformer = new MolecularTransformerBlock();
         molecularTransformer.setRegistryName(SolarPower.MODID, "molecular_transformer");
         molecularTransformer.setUnlocalizedName(SolarPower.MODID + ".molecular_transformer");
@@ -53,6 +62,10 @@ public final class ModBlocks {
 
     public static GlassCableBlock cable(GlassCableTier tier) {
         return CABLES.get(tier);
+    }
+
+    public static StorageBoxBlock storageBox(SolarTier tier) {
+        return STORAGE_BOXES.get(tier);
     }
 
     public static MolecularTransformerBlock molecularTransformer() {

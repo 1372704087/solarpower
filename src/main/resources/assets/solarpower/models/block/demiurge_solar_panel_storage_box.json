@@ -1,0 +1,12 @@
+{
+  "parent": "block/cube",
+  "textures": {
+    "north": "solarpower:block/demiurge_solar_panel_storage_box_front",
+    "south": "solarpower:block/demiurge_solar_panel_storage_box_side",
+    "east": "solarpower:block/demiurge_solar_panel_storage_box_side",
+    "west": "solarpower:block/demiurge_solar_panel_storage_box_side",
+    "up": "solarpower:block/demiurge_solar_panel_storage_box_topbottom",
+    "down": "solarpower:block/demiurge_solar_panel_storage_box_topbottom",
+    "particle": "solarpower:block/demiurge_solar_panel_storage_box_side"
+  }
+}

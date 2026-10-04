@@ -36,6 +36,13 @@ public final class ClientModelRegistry {
                         new ModelResourceLocation(item.getRegistryName(), "inventory"));
             }
         }
+        for (SolarTier tier : SolarTier.values()) {
+            Item item = ModItems.storageBoxItem(tier);
+            if (item != null) {
+                ModelLoader.setCustomModelResourceLocation(item, 0,
+                        new ModelResourceLocation(item.getRegistryName(), "inventory"));
+            }
+        }
         // 分子重组机方块物品 + 太阳能合成物品
         for (Item item : ModItems.craftingItems()) {
             ModelLoader.setCustomModelResourceLocation(item, 0,

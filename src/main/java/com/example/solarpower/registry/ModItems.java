@@ -27,6 +27,7 @@ public final class ModItems {
 
     private static final Map<SolarTier, Item> PANEL_ITEMS = new EnumMap<>(SolarTier.class);
     private static final Map<GlassCableTier, Item> CABLE_ITEMS = new EnumMap<>(GlassCableTier.class);
+    private static final Map<SolarTier, Item> STORAGE_BOX_ITEMS = new EnumMap<>(SolarTier.class);
     private static final Map<SolarTier, Item> PANE_ITEMS = new EnumMap<>(SolarTier.class);
     private static final Map<SolarTier, Item> SUNNARIUM_ITEMS = new EnumMap<>(SolarTier.class);
     private static final Map<SolarTier, Item> SUNNARIUM_PART_ITEMS = new EnumMap<>(SolarTier.class);
@@ -61,6 +62,14 @@ public final class ModItems {
             item.setCreativeTab(SolarPower.CREATIVE_TAB);
             event.getRegistry().register(item);
             CABLE_ITEMS.put(tier, item);
+        }
+        // 储电盒的方块物品（普通 ItemBlock：电量 NBT 由方块 getDrops/onBlockPlacedBy 处理）
+        for (SolarTier tier : SolarTier.values()) {
+            Item item = new ItemBlock(ModBlocks.storageBox(tier)).setRegistryName(
+                    SolarPower.MODID, tier.id() + "_storage_box");
+            item.setCreativeTab(SolarPower.CREATIVE_TAB);
+            event.getRegistry().register(item);
+            STORAGE_BOX_ITEMS.put(tier, item);
         }
         // 分子重组仪的方块物品
         Item transformer = new ItemBlock(ModBlocks.molecularTransformer()).setRegistryName(
@@ -139,6 +148,10 @@ public final class ModItems {
 
     public static Item cableItem(GlassCableTier tier) {
         return CABLE_ITEMS.get(tier);
+    }
+
+    public static Item storageBoxItem(SolarTier tier) {
+        return STORAGE_BOX_ITEMS.get(tier);
     }
 
     /** 按注册名取合成链物品（配方表使用）。 */
